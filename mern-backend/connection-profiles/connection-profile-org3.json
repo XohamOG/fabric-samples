@@ -1,0 +1,58 @@
+{
+    "name": "fabric-network",
+    "version": "1.0.0",
+    "client": {
+      "organization": "Org3",
+      "credentialStore": {
+        "path": "./fabric-network/wallets/org3-wallet"
+      }
+    },
+    "channels": {
+      "insurancepatient": {
+        "orderers": [
+          {
+            "url": "grpcs://orderer.example.com:7050"
+          }
+        ],
+        "peers": {
+          "peer0.org3.example.com": {
+            "url": "grpcs://peer0.org3.example.com:7051",
+            "tlsCACerts": {
+              "path": "./fabric-network/crypto-config/peerOrganizations/org3.example.com/tlsca/tlsca.org3.example.com-cert.pem"
+            }
+          }
+        }
+      }
+    },
+    "organizations": {
+      "Org3": {
+        "mspid": "Org3MSP",
+        "certificateAuthorities": [
+          "ca.org3.example.com"
+        ]
+      }
+    },
+    "orderers": {
+      "orderer.example.com": {
+        "url": "grpcs://orderer.example.com:7050",
+        "tlsCACerts": {
+          "path": "./fabric-network/crypto-config/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem"
+        }
+      }
+    },
+    "peers": {
+      "peer0.org3.example.com": {
+        "url": "grpcs://peer0.org3.example.com:7051",
+        "tlsCACerts": {
+          "path": "./fabric-network/crypto-config/peerOrganizations/org3.example.com/tlsca/tlsca.org3.example.com-cert.pem"
+        }
+      }
+    },
+    "certificateAuthorities": {
+      "ca.org3.example.com": {
+        "url": "https://ca.org3.example.com:7054",
+        "caName": "ca-org3"
+      }
+    }
+  }
+  

@@ -11,7 +11,7 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const { TextDecoder } = require('node:util');
 
-const channelName = envOrDefault('CHANNEL_NAME', 'mychannel');
+const channelName = envOrDefault('CHANNEL_NAME', 'hospitalpatient');
 const chaincodeName = envOrDefault('CHAINCODE_NAME', 'basic');
 const mspId = envOrDefault('MSP_ID', 'Org1MSP');
 
