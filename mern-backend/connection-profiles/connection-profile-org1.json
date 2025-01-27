@@ -2,55 +2,40 @@
     "name": "fabric-network",
     "version": "1.0.0",
     "client": {
-      "organization": "Org1",
-      "credentialStore": {
-        "path": "./wallets/org1-wallet"
-      }
+        "organization": "Org1",
+        "credentialStore": {
+            "path": "./wallets/org1-wallet"
+        }
     },
     "channels": {
-      "hospitalpatient": {
-        "orderers": [
-          {
-            "url": "grpcs://localhost:7050"
-          }
-        ],
-        "peers": {
-          "peer0.org1.example.com": {
-            "url": "grpcs://localhost:7051",
-            "tlsCACerts": {
-              "path": "../test-network/organizations/peerOrganizations/org1.example.com/tlsca/tlsca.org1.example.com-cert.pem"
+        "hospitalpatient": {
+            "orderers": ["orderer.example.com"],
+            "peers": {
+                "peer0.org1.example.com": {}
             }
-          }
         }
-      }
     },
     "organizations": {
-      "Org1": {
-        "mspid": "Org1MSP",
-        "certificateAuthorities": ["ca.org1.example.com"]
-      }
-    },
-    "orderers": {
-      "orderer.example.com": {
-        "url": "grpcs://localhost:7050",
-        "tlsCACerts": {
-          "path": "../test-network/organizations/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem"
+        "Org1": {
+            "mspid": "Org1MSP",
+            "peers": [
+                "peer0.org1.example.com"
+            ],
+            "certificateAuthorities": ["ca.org1.example.com"]
         }
-      }
     },
     "peers": {
-      "peer0.org1.example.com": {
-        "url": "grpcs://localhost:7051",
-        "tlsCACerts": {
-          "path": "../test-network/organizations/peerOrganizations/org1.example.com/tlsca/tlsca.org1.example.com-cert.pem"
+        "peer0.org1.example.com": {
+            "url": "grpcs://localhost:7051",
+            "tlsCACerts": {
+                "path": "../test-network/organizations/peerOrganizations/org1.example.com/tlsca/tlsca.org1.example.com-cert.pem"
+            }
         }
-      }
     },
     "certificateAuthorities": {
-      "ca.org1.example.com": {
-        "url": "https://localhost:7054",
-        "caName": "ca-org1"
-      }
+        "ca.org1.example.com": {
+            "url": "https://localhost:7054",
+            "caName": "ca-org1"
+        }
     }
-  }
-  
+}
