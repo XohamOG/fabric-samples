@@ -1,12 +1,27 @@
 const express = require('express');
-const app = express();
+const cors = require('cors');
 const bodyParser = require('body-parser');
-const fabricRoutes = require('./routes/fabricRoutes'); // Adjust path if needed
+const fabricRoutes = require('./routes/fabricRoutes'); // Ensure correct path
 
-app.use(bodyParser.json()); // Ensure body parser is used to parse JSON
-app.use('/api', fabricRoutes); // Make sure the prefix is '/api'
+const app = express();
+const port = 5000;
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+// Enable CORS for all requests
+app.use(cors());
+
+// Middleware to parse JSON requests
+app.use(bodyParser.json());
+
+// Logging middleware (placed before routes for proper request logging)
+app.use((req, res, next) => {
+    console.log(`Request received: ${req.method} ${req.url}`);
+    next();
+});
+
+// Use fabric routes with '/api' prefix
+app.use('/api', fabricRoutes);
+
+// Start the server
+app.listen(port, () => {
+    console.log(`Server is running on port ${port}`);
 });

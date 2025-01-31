@@ -5,14 +5,14 @@ const FabricInteraction = () => {
   const [result, setResult] = useState('');
 
   // Use this example data or pass dynamic values if required
-  const args = ['record3', 'Alice', 'Female', 'B+', 'Dust', 'Cancer', 'Chemo', '{"Total":2000,"Paid":1000,"Due":1000}'];
+  const args = ['record9', 'Alice', 'Female', 'B+', 'Dust', 'Cancer', 'Chemo', '{"Total":2000,"Paid":1000,"Due":1000}'];
   
   const handleInvoke = async () => {
     try {
-      const response = await axios.post('http://localhost:5000/fabric/invoke', {
+      const response = await axios.post('http://localhost:5000/api/fabric/invoke', {
         org: 'org1',
         channel: 'hospitalpatient',
-        contractName: 'healthRecordContract',
+        contractName: 'basic',
         fcn: 'CreateRecord',
         args,
       });
@@ -24,8 +24,8 @@ const FabricInteraction = () => {
 
   const handleQuery = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/fabric/query', {
-        params: { org: 'org1', channel: 'hospitalpatient', contractName: 'healthRecordContract', fcn: 'CreateRecord', args },
+      const response = await axios.get('http://localhost:5000/api/fabric/query', {
+        params: { org: 'org1', channel: 'hospitalpatient', contractName: 'basic', fcn: 'CreateRecord', args },
       });
       setResult(response.data.message);
     } catch (error) {
