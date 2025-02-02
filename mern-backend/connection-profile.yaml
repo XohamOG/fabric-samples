@@ -1,0 +1,117 @@
+name: fabric-network
+version: '1.0.0'
+
+client:
+  organization: Org1
+  credentialStore:
+    path: ./wallets/org1-wallet
+
+channels:
+  hospitalpatient:
+    orderers:
+      - orderer.example.com
+    peers:
+      peer0.org1.example.com:
+        endorsingPeer: true
+        chaincodeQuery: true
+        ledgerQuery: true
+        eventSource: true
+      peer0.org2.example.com:
+        endorsingPeer: true
+        chaincodeQuery: true
+        ledgerQuery: true
+        eventSource: true
+      peer0.org3.example.com:
+        endorsingPeer: true
+        chaincodeQuery: true
+        ledgerQuery: true
+        eventSource: true
+  insurancepatient:
+    orderers:
+      - orderer.example.com
+    peers:
+      peer0.org2.example.com:
+        endorsingPeer: true
+        chaincodeQuery: true
+        ledgerQuery: true
+        eventSource: true
+      peer0.org3.example.com:
+        endorsingPeer: true
+        chaincodeQuery: true
+        ledgerQuery: true
+        eventSource: true
+
+organizations:
+  Org1:
+    mspid: Org1MSP
+    peers:
+      - peer0.org1.example.com
+    certificateAuthorities:
+      - ca.org1.example.com
+
+  Org2:
+    mspid: Org2MSP
+    peers:
+      - peer0.org2.example.com
+    certificateAuthorities:
+      - ca.org2.example.com
+
+  Org3:
+    mspid: Org3MSP
+    peers:
+      - peer0.org3.example.com
+    certificateAuthorities:
+      - ca.org3.example.com
+
+peers:
+  peer0.org1.example.com:
+    url: grpcs://localhost:7051
+    tlsCACerts:
+      path: ../test-network/organizations/peerOrganizations/org1.example.com/tlsca/tlsca.org1.example.com-cert.pem
+    grpcOptions:
+      ssl-target-name-override: peer0.org1.example.com
+      grpc.keepalive_time_ms: 60000
+
+  peer0.org2.example.com:
+    url: grpcs://localhost:9051
+    tlsCACerts:
+      path: ../test-network/organizations/peerOrganizations/org2.example.com/tlsca/tlsca.org2.example.com-cert.pem
+    grpcOptions:
+      ssl-target-name-override: peer0.org2.example.com
+      grpc.keepalive_time_ms: 60000
+
+  peer0.org3.example.com:
+    url: grpcs://localhost:11051
+    tlsCACerts:
+      path: ../test-network/organizations/peerOrganizations/org3.example.com/tlsca/tlsca.org3.example.com-cert.pem
+    grpcOptions:
+      ssl-target-name-override: peer0.org3.example.com
+      grpc.keepalive_time_ms: 60000
+
+orderers:
+  orderer.example.com:
+    url: grpcs://localhost:7050
+    tlsCACerts:
+      path: ../test-network/organizations/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem
+    grpcOptions:
+      ssl-target-name-override: orderer.example.com
+      grpc.keepalive_time_ms: 60000
+
+certificateAuthorities:
+  ca.org1.example.com:
+    url: https://localhost:7054
+    caName: ca-org1
+    tlsCACerts:
+      path: ../test-network/organizations/peerOrganizations/org1.example.com/ca/ca.org1.example.com-cert.pem
+
+  ca.org2.example.com:
+    url: https://localhost:8054
+    caName: ca-org2
+    tlsCACerts:
+      path: ../test-network/organizations/peerOrganizations/org2.example.com/ca/ca.org2.example.com-cert.pem
+
+  ca.org3.example.com:
+    url: https://localhost:9054
+    caName: ca-org3
+    tlsCACerts:
+      path: ../test-network/organizations/peerOrganizations/org3.example.com/ca/ca.org3.example.com-cert.pem

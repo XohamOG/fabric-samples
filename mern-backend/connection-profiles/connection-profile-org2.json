@@ -1,63 +1,75 @@
 {
-  "name": "fabric-network",
-  "version": "1.0.0",
-  "client": {
-      "organization": "Org2",
-      "credentialStore": {
-          "path": "./wallets/org2-wallet"
-      }
-  },
-  "channels": {
-      "hospitalpatient": {
-          "orderers": ["orderer.example.com"],
-          "peers": {
-              "peer0.org2.example.com": {
-                  "endorsingPeer": true,
-                  "chaincodeQuery": true,
-                  "ledgerQuery": true,
-                  "eventSource": true
-              }
-          }
-      }
-  },
-  "organizations": {
-      "Org2": {
-          "mspid": "Org2MSP",
-          "peers": ["peer0.org2.example.com"],
-          "certificateAuthorities": ["ca.org2.example.com"]
-      }
-  },
-  "peers": {
-      "peer0.org2.example.com": {
-          "url": "grpcs://localhost:9051",
-          "tlsCACerts": {
-              "path": "../test-network/organizations/peerOrganizations/org2.example.com/tlsca/tlsca.org2.example.com-cert.pem"
-          },
-          "grpcOptions": {
-              "ssl-target-name-override": "peer0.org2.example.com",
-              "grpc.keepalive_time_ms": 60000
-          }
-      }
-  },
-  "orderers": {
-      "orderer.example.com": {
-          "url": "grpcs://localhost:7050",
-          "tlsCACerts": {
-              "path": "../test-network/organizations/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem"
-          },
-          "grpcOptions": {
-              "ssl-target-name-override": "orderer.example.com",
-              "grpc.keepalive_time_ms": 60000
-          }
-      }
-  },
-  "certificateAuthorities": {
-      "ca.org2.example.com": {
-          "url": "https://localhost:8054",
-          "caName": "ca-org2",
-          "tlsCACerts": {
-              "path": "../test-network/organizations/peerOrganizations/org2.example.com/ca/ca.org2.example.com-cert.pem"
-          }
-      }
+    "name": "fabric-network",
+    "version": "1.0.0",
+    "client": {
+        "organization": "Org2",
+        "credentialStore": {
+            "path": "./wallets/org2-wallet"
+        }
+    },
+    "channels": {
+        "hospitalpatient": {
+            "orderers": ["orderer.example.com"],
+            "peers": {
+                "peer0.org2.example.com": {
+                    "endorsingPeer": true,
+                    "chaincodeQuery": true,
+                    "ledgerQuery": true,
+                    "eventSource": true
+                }
+            }
+        },
+        "insurancepatient": {
+            "orderers": ["orderer.example.com"],
+            "peers": {
+                "peer0.org2.example.com": {
+                    "endorsingPeer": true,
+                    "chaincodeQuery": true,
+                    "ledgerQuery": true,
+                    "eventSource": true
+                }
+            }
+        }
+    },
+    "organizations": {
+        "Org2": {
+            "mspid": "Org2MSP",
+            "peers": ["peer0.org2.example.com"],
+            "certificateAuthorities": ["ca.org2.example.com"]
+        }
+    },
+    "peers": {
+        "peer0.org2.example.com": {
+            "url": "grpcs://localhost:9051",
+            "tlsCACerts": {
+                "path": "../test-network/organizations/peerOrganizations/org2.example.com/tlsca/tlsca.org2.example.com-cert.pem"
+            },
+            "grpcOptions": {
+                "ssl-target-name-override": "peer0.org2.example.com",
+                "grpc.keepalive_time_ms": 60000
+            }
+        }
+    },
+    "orderers": {
+        "orderer.example.com": {
+            "url": "grpcs://localhost:7050",
+            "tlsCACerts": {
+                "path": "../test-network/organizations/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem"
+            },
+            "grpcOptions": {
+                "ssl-target-name-override": "orderer.example.com",
+                "grpc.keepalive_time_ms": 60000
+            }
+        }
+    },
+    "certificateAuthorities": {
+        "ca.org2.example.com": {
+            "url": "https://localhost:8054",
+            "caName": "ca-org2",
+            "tlsCACerts": {
+                "path": "../test-network/organizations/peerOrganizations/org2.example.com/ca/ca.org2.example.com-cert.pem"
+            }
+        }
+    }
   }
-}
+  

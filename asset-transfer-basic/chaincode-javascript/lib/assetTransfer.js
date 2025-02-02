@@ -153,3 +153,4 @@ class AssetTransfer extends Contract {
 }
 
 module.exports = AssetTransfer;
+        

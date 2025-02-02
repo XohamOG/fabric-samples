@@ -1,6 +1,6 @@
 import React from 'react';
 import './App.css';
-import FabricInteraction from './FabricInteraction';
+import FabricInteraction from './HealthRecordApp';
 
 function App() {
   return (
