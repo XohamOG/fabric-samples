@@ -2,84 +2,83 @@ const { Gateway, Wallets } = require('fabric-network');
 const path = require('path');
 const fs = require('fs');
 
-// Invoke Transaction
-// Invoke Transaction with Duplicate Record Check
+// Utility function to get Fabric connection profile
+const getConnectionProfile = (org) => {
+    try {
+        const ccpPath = path.resolve(__dirname, `../connection-profiles/connection-profile-${org}.json`);
+        return JSON.parse(fs.readFileSync(ccpPath, 'utf8'));
+    } catch (error) {
+        throw new Error(`Failed to load connection profile for ${org}: ${error.message}`);
+    }
+};
+
+// Utility function to get the wallet
+const getWallet = async (org) => {
+    const walletPath = path.resolve(__dirname, `../wallets/${org}-wallet`);
+    return await Wallets.newFileSystemWallet(walletPath);
+};
+
+// Utility function to get Fabric gateway and contract
+const getContract = async (org, channel, contractName, identity) => {
+    const ccp = getConnectionProfile(org);
+    const wallet = await getWallet(org);
+    const identityExists = await wallet.get(identity);
+
+    if (!identityExists) {
+        throw new Error(`Identity "${identity}" not found in wallet`);
+    }
+
+    const gateway = new Gateway();
+    await gateway.connect(ccp, { wallet, identity, discovery: { enabled: true, asLocalhost: true } });
+
+    const network = await gateway.getNetwork(channel);
+    const contract = network.getContract(contractName);
+
+    return { gateway, contract };
+};
+
 exports.invokeTransaction = async (req, res) => {
     try {
-        const { org, channel, contractName, fcn, args } = req.body;
-        const recordId = args[0];  // First argument is the record ID
-        
-        // Load the connection profile for the specified organization
-        const ccpPath = path.resolve(__dirname, `../connection-profiles/connection-profile-${org}.json`);
-        const ccp = JSON.parse(fs.readFileSync(ccpPath, 'utf8'));
+        const { org, channel, contractName, fcn, args, identity = 'user1' } = req.body;
 
-        // Load the wallet for the organization
-        const walletPath = path.resolve(__dirname, `../wallets/org1-wallet`);
-        const wallet = await Wallets.newFileSystemWallet(walletPath);
+        const { gateway, contract } = await getContract(org, channel, contractName, identity);
 
-        // Check if the identity exists in the wallet
-        const identity = await wallet.get('user1'); // Ensure the correct identity name
-        if (!identity) {
-            return res.status(500).json({ success: false, error: 'Identity "user1" not found in wallet' });
+        // Example: Check if the record exists first, or proceed to create if not.
+        if (fcn === 'CreateRecord') {
+            const recordId = args[0];
+            try {
+                const existingRecord = await contract.evaluateTransaction('QueryRecord', recordId);
+                if (existingRecord.length > 0) {
+                    return res.status(400).json({ success: false, error: `Record ${recordId} already exists` });
+                }
+            } catch (err) {
+                console.log('Record does not exist, proceeding to create it.');
+            }
         }
 
-        // Connect to the gateway using the correct identity
-        const gateway = new Gateway();
-        await gateway.connect(ccp, { wallet, identity: 'user1', discovery: { enabled: true, asLocalhost: true } });
-
-        // Get the specified channel and contract
-        const network = await gateway.getNetwork(channel);
-        const contract = network.getContract(contractName);
-
-        // Check if the record already exists
-        const existingRecord = await contract.evaluateTransaction('QueryRecord', recordId);
-        if (existingRecord) {
-            return res.status(500).json({ success: false, error: `The record ${recordId} already exists` });
-        }
-
-        // Submit the transaction to create the record
+        // Submit the transaction (e.g., create a new record)
         const result = await contract.submitTransaction(fcn, ...args);
-        res.status(200).json({ success: true, message: result.toString() });
-
         await gateway.disconnect();
+
+        res.status(200).json({ success: true, message: result.toString() });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
 };
 
-
 // Query Transaction
 exports.queryTransaction = async (req, res) => {
     try {
-        const { org, channel, contractName, fcn, args } = req.query;
+        const { org, channel, contractName, fcn, args, identity = 'user1' } = req.query;
 
-        // Load the connection profile for the specified organization
-        const ccpPath = path.resolve(__dirname, `../connection-profiles/connection-profile-${org}.json`);
-        const ccp = JSON.parse(fs.readFileSync(ccpPath, 'utf8'));
-
-        // Load the wallet for the organization
-        const walletPath = path.resolve(__dirname, `../wallets/org1-wallet`);
-        const wallet = await Wallets.newFileSystemWallet(walletPath);
-
-        // Check if the identity exists in the wallet
-        const identity = await wallet.get('user1'); // Ensure the correct identity name
-        if (!identity) {
-            return res.status(500).json({ success: false, error: 'Identity "user1" not found in wallet' });
-        }
-
-        // Connect to the gateway using the correct identity
-        const gateway = new Gateway();
-        await gateway.connect(ccp, { wallet, identity: 'user1', discovery: { enabled: true, asLocalhost: true } });
-
-        // Get the specified channel and contract
-        const network = await gateway.getNetwork(channel);
-        const contract = network.getContract(contractName);
-
-        // Evaluate the transaction
-        const result = await contract.evaluateTransaction(fcn, ...args);
-        res.status(200).json({ success: true, message: result.toString() });
-
+        const { gateway, contract } = await getContract(org, channel, contractName, identity);
+        
+        // Query the chaincode with patient ID (or other args)
+        const result = await contract.evaluateTransaction(fcn, ...args); // args should contain the correct parameters (e.g., patientId)
+        
         await gateway.disconnect();
+
+        res.status(200).json({ success: true, data: JSON.parse(result.toString()) });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }

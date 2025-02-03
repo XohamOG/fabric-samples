@@ -1,18 +1,12 @@
-/*
- * Copyright IBM Corp. All Rights Reserved.
- *
- * SPDX-License-Identifier: Apache-2.0
- */
-
 'use strict';
 
-// Deterministic JSON.stringify()
-const stringify  = require('json-stringify-deterministic');
-const sortKeysRecursive  = require('sort-keys-recursive');
+const stringify = require('json-stringify-deterministic');
+const sortKeysRecursive = require('sort-keys-recursive');
 const { Contract } = require('fabric-contract-api');
 
 class AssetTransfer extends Contract {
 
+    // Initialize ledger with some records
     async InitLedger(ctx) {
         const records = [
             {
@@ -72,7 +66,7 @@ class AssetTransfer extends Contract {
         return JSON.stringify(record);
     }
 
-    // ReadRecord returns the health record stored in the world state with given id.
+    // ReadRecord returns the full health record stored in the world state with given id.
     async ReadRecord(ctx, id) {
         const recordJSON = await ctx.stub.getState(id);
         if (!recordJSON || recordJSON.length === 0) {
@@ -81,7 +75,7 @@ class AssetTransfer extends Contract {
         return recordJSON.toString();
     }
 
-    // ReadRecordForInsurance returns only billing and personal info for insurance.
+    // ReadRecordForInsurance returns only billing and personal info for insurance purposes.
     async ReadRecordForInsurance(ctx, id) {
         const recordJSON = await ctx.stub.getState(id);
         if (!recordJSON || recordJSON.length === 0) {
@@ -96,6 +90,25 @@ class AssetTransfer extends Contract {
         return JSON.stringify(limitedRecord);
     }
 
+    // ReadRecordForPatient returns personal info of the patient (but not billing).
+    async ReadRecordForPatient(ctx, id) {
+        const recordJSON = await ctx.stub.getState(id);
+        if (!recordJSON || recordJSON.length === 0) {
+            throw new Error(`The record ${id} does not exist`);
+        }
+        const record = JSON.parse(recordJSON.toString());
+        const patientRecord = {
+            ID: record.ID,
+            Name: record.Name,
+            Gender: record.Gender,
+            BloodType: record.BloodType,
+            Allergies: record.Allergies,
+            Diagnosis: record.Diagnosis,
+            Treatment: record.Treatment,
+        };
+        return JSON.stringify(patientRecord);
+    }
+
     // UpdateRecord updates an existing health record in the world state with provided parameters.
     async UpdateRecord(ctx, id, name, gender, bloodType, allergies, diagnosis, treatment, billing) {
         const exists = await this.RecordExists(ctx, id);
@@ -103,17 +116,23 @@ class AssetTransfer extends Contract {
             throw new Error(`The record ${id} does not exist`);
         }
 
-        const updatedRecord = {
-            ID: id,
-            Name: name,
-            Gender: gender,
-            BloodType: bloodType,
-            Allergies: allergies,
-            Diagnosis: diagnosis,
-            Treatment: treatment,
-            Billing: JSON.parse(billing),
-        };
-        return ctx.stub.putState(id, Buffer.from(stringify(sortKeysRecursive(updatedRecord))));
+        // Get the existing record
+        const recordJSON = await this.ReadRecord(ctx, id);
+        const record = JSON.parse(recordJSON);
+
+        // Update the record fields
+        record.Name = name;
+        record.Gender = gender;
+        record.BloodType = bloodType;
+        record.Allergies = allergies;
+        record.Diagnosis = diagnosis;
+        record.Treatment = treatment;
+        record.Billing = JSON.parse(billing);
+        record.Timestamp = new Date().toISOString();
+
+        // Store the updated record back to state
+        await ctx.stub.putState(id, Buffer.from(stringify(sortKeysRecursive(record))));
+        return JSON.stringify(record);
     }
 
     // DeleteRecord deletes a given health record from the world state.
@@ -125,7 +144,7 @@ class AssetTransfer extends Contract {
         return ctx.stub.deleteState(id);
     }
 
-    // RecordExists returns true when a health record with given ID exists in world state.
+    // RecordExists checks if a record exists for the given ID.
     async RecordExists(ctx, id) {
         const recordJSON = await ctx.stub.getState(id);
         return recordJSON && recordJSON.length > 0;
@@ -153,4 +172,3 @@ class AssetTransfer extends Contract {
 }
 
 module.exports = AssetTransfer;
-        

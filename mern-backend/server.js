@@ -1,99 +1,100 @@
 const express = require('express');
 const { Gateway, Wallets } = require('fabric-network');
 const path = require('path');
-const fs = require('fs'); // To read the YAML file as an object
+const fs = require('fs');
 const cors = require('cors');
 const yaml = require('js-yaml');
+
 const app = express();
 const port = 5000;
 
-app.use(cors()); // Enable CORS
-app.use(express.json()); // Middleware to parse JSON requests
+app.use(cors());
+app.use(express.json());
 
-// Define route for invoking a transaction (for creating records)
-app.post('/api/fabric/invoke', async (req, res) => {
-    const { org, channel, contractName, fcn, args } = req.body;
-
+// Utility function to get Fabric connection
+async function getFabricConnection(org) {
     try {
-        // Set up Fabric network connection
-        const walletPath = path.resolve(__dirname, 'wallets', `${org}-wallet`); // Ensure this points to the correct wallet
+        const walletPath = path.resolve(__dirname, 'wallets', `${org}-wallet`);
         const wallet = await Wallets.newFileSystemWallet(walletPath);
         const gateway = new Gateway();
 
-        // Read the connection profile YAML file and parse it as an object
         const networkConfigPath = path.resolve(__dirname, 'connection-profile.yaml');
-        const networkConfig = yaml.load(fs.readFileSync(networkConfigPath, 'utf8')); // Assuming you have 'js-yaml' installed
+        const networkConfig = yaml.load(fs.readFileSync(networkConfigPath, 'utf8'));
 
-        // Debug the networkConfig to ensure it's read properly
-        console.log("Network Config:", networkConfig);
-
-        // Connect to the Fabric network using the parsed connection profile object
         await gateway.connect(networkConfig, {
             wallet,
-            identity: 'admin', // Ensure the identity exists in the wallet
+            identity: 'admin',
             discovery: { enabled: true, asLocalhost: true },
         });
 
-        const network = await gateway.getNetwork(channel);
+        return { gateway, network: await gateway.getNetwork('hospitalpatient') };
+    } catch (error) {
+        throw new Error(`Failed to connect to Fabric network: ${error.message}`);
+    }
+}
+
+// Route for invoking transactions (creating/updating records)
+app.post('/api/fabric/invoke', async (req, res) => {
+    try {
+        const { org, contractName, fcn, args } = req.body;
+
+        // Log the incoming request for debugging
+        console.log('Received request:', req.body);
+
+        if (!org || !contractName || !fcn || !Array.isArray(args)) {
+            return res.status(400).json({ success: false, error: 'Missing or invalid required fields' });
+        }
+
+        console.log(`Invoking transaction: ${fcn} on contract ${contractName} with args:`, args);
+
+        // Connect to Fabric
+        const { gateway, network } = await getFabricConnection(org);
         const contract = network.getContract(contractName);
 
-        // Submit the transaction (invoke function)
+        // Submitting transaction
         const result = await contract.submitTransaction(fcn, ...args);
-
-        // Disconnect the gateway
         await gateway.disconnect();
 
-        // Send the result back to the client
         res.status(200).json({ success: true, result: result.toString() });
     } catch (error) {
         console.error('Error invoking transaction:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });
-
-// Define route for querying records
-app.get('/api/fabric/query', async (req, res) => {
-    const org = 'org1'; // specify your org here
-    const channel = 'hospitalpatient'; // specify your channel name
-    const contractName = 'basic'; // specify your contract name
-
+// Route for querying records
+app.get('/api/fabric/query/:role/:patientId', async (req, res) => {
     try {
-        // Set up Fabric network connection
-        const walletPath = path.resolve(__dirname, 'wallets', `${org}-wallet`); // Ensure this points to the correct wallet
-        const wallet = await Wallets.newFileSystemWallet(walletPath);
-        const gateway = new Gateway();
+        const { role, patientId } = req.params;
+        const org = 'org1';
+        const contractName = 'basic';
 
-        // Read the connection profile YAML file and parse it as an object
-        const networkConfigPath = path.resolve(__dirname, 'connection-profile.yaml');
-        const networkConfig = yaml.load(fs.readFileSync(networkConfigPath, 'utf8')); // Assuming you have 'js-yaml' installed
+        if (!patientId) {
+            return res.status(400).json({ success: false, error: 'Patient ID is required' });
+        }
 
-        // Connect to the Fabric network using the parsed connection profile object
-        await gateway.connect(networkConfig, {
-            wallet,
-            identity: 'admin', // Ensure the identity exists in the wallet
-            discovery: { enabled: true, asLocalhost: true },
-        });
+        console.log(`Querying record for role: ${role}, Patient ID: ${patientId}`);
 
-        const network = await gateway.getNetwork(channel);
+        // Connect to Fabric
+        const { gateway, network } = await getFabricConnection(org);
         const contract = network.getContract(contractName);
 
-        // Query the chaincode (for fetching records)
-        const result = await contract.evaluateTransaction('GetAllRecords');
-        console.log(`Query Result: ${result.toString()}`);
+        let result;
+        if (role === 'insurance') {
+            result = await contract.evaluateTransaction('ReadRecordForInsurance', patientId);
+        } else {
+            result = await contract.evaluateTransaction('ReadRecordForPatient', patientId);
+        }
 
-        // Optionally, parse the result if it's JSON
-        const records = JSON.parse(result.toString());
-        res.status(200).json(records);
-
-        // Disconnect the gateway
         await gateway.disconnect();
+
+        res.status(200).json({ success: true, result: JSON.parse(result.toString()) });
     } catch (error) {
-        console.error('Error querying records:', error);
+        console.error('Error querying record:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });
 
-// Start the Express server
+// Start the server
 app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
 });
