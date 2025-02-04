@@ -8,6 +8,7 @@ const yaml = require('js-yaml');
 const app = express();
 const port = 5000;
 
+// Middleware
 app.use(cors());
 app.use(express.json());
 
@@ -47,7 +48,9 @@ app.post('/api/fabric/invoke', async (req, res) => {
         const { gateway, network } = await getFabricConnection(org);
         const contract = network.getContract(contractName);
 
+        // Invoke the transaction on the Fabric network
         const result = await contract.submitTransaction(fcn, ...args);
+
         await gateway.disconnect();
 
         res.status(200).json({ success: true, result: result.toString() });
@@ -61,8 +64,8 @@ app.post('/api/fabric/invoke', async (req, res) => {
 app.get('/api/fabric/query/:role/:patientId', async (req, res) => {
     try {
         const { role, patientId } = req.params;
-        const org = 'org1';
-        const contractName = 'basic';
+        const org = 'org1'; // Assume org1 for now, modify as needed
+        const contractName = 'basic'; // Modify to use the actual contract name if needed
 
         if (!patientId) {
             return res.status(400).json({ success: false, error: 'Patient ID is required' });
@@ -75,9 +78,13 @@ app.get('/api/fabric/query/:role/:patientId', async (req, res) => {
 
         let result;
         if (role === 'insurance') {
-            result = await contract.evaluateTransaction('ReadRecordForInsurance', patientId);
+            // Assuming 'ReadInsuranceRecord' is the function for insurance-related data
+            result = await contract.evaluateTransaction('ReadInsuranceRecord', patientId);
+        } else if (role === 'patient') {
+            // Assuming 'ReadHospitalRecord' is the function for hospital-related data
+            result = await contract.evaluateTransaction('ReadHospitalRecord', patientId);
         } else {
-            result = await contract.evaluateTransaction('ReadRecordForPatient', patientId);
+            return res.status(400).json({ success: false, error: 'Invalid role' });
         }
 
         await gateway.disconnect();

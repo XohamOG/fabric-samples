@@ -29,7 +29,7 @@ const HealthRecordApp = () => {
             setResponseMessage('Please enter a valid patient ID');
             return;
         }
-
+        
         try {
             const endpoint = role === 'insurance'
                 ? `http://localhost:5000/api/fabric/query/insurance/${patientId}`

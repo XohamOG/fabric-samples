@@ -37,13 +37,14 @@ const getContract = async (org, channel, contractName, identity) => {
     return { gateway, contract };
 };
 
+// Function to invoke transaction
 exports.invokeTransaction = async (req, res) => {
     try {
         const { org, channel, contractName, fcn, args, identity = 'user1' } = req.body;
 
         const { gateway, contract } = await getContract(org, channel, contractName, identity);
 
-        // Example: Check if the record exists first, or proceed to create if not.
+        // Check if record exists before creating it
         if (fcn === 'CreateRecord') {
             const recordId = args[0];
             try {
@@ -56,7 +57,7 @@ exports.invokeTransaction = async (req, res) => {
             }
         }
 
-        // Submit the transaction (e.g., create a new record)
+        // Submit the transaction
         const result = await contract.submitTransaction(fcn, ...args);
         await gateway.disconnect();
 
@@ -66,16 +67,16 @@ exports.invokeTransaction = async (req, res) => {
     }
 };
 
-// Query Transaction
+// Function to query transaction
 exports.queryTransaction = async (req, res) => {
     try {
         const { org, channel, contractName, fcn, args, identity = 'user1' } = req.query;
 
         const { gateway, contract } = await getContract(org, channel, contractName, identity);
-        
-        // Query the chaincode with patient ID (or other args)
+
+        // Query the chaincode with patient ID
         const result = await contract.evaluateTransaction(fcn, ...args); // args should contain the correct parameters (e.g., patientId)
-        
+
         await gateway.disconnect();
 
         res.status(200).json({ success: true, data: JSON.parse(result.toString()) });
