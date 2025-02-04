@@ -38,20 +38,15 @@ app.post('/api/fabric/invoke', async (req, res) => {
     try {
         const { org, contractName, fcn, args } = req.body;
 
-        // Log the incoming request for debugging
-        console.log('Received request:', req.body);
-
         if (!org || !contractName || !fcn || !Array.isArray(args)) {
             return res.status(400).json({ success: false, error: 'Missing or invalid required fields' });
         }
 
         console.log(`Invoking transaction: ${fcn} on contract ${contractName} with args:`, args);
 
-        // Connect to Fabric
         const { gateway, network } = await getFabricConnection(org);
         const contract = network.getContract(contractName);
 
-        // Submitting transaction
         const result = await contract.submitTransaction(fcn, ...args);
         await gateway.disconnect();
 
@@ -61,6 +56,7 @@ app.post('/api/fabric/invoke', async (req, res) => {
         res.status(500).json({ success: false, error: error.message });
     }
 });
+
 // Route for querying records
 app.get('/api/fabric/query/:role/:patientId', async (req, res) => {
     try {
@@ -74,7 +70,6 @@ app.get('/api/fabric/query/:role/:patientId', async (req, res) => {
 
         console.log(`Querying record for role: ${role}, Patient ID: ${patientId}`);
 
-        // Connect to Fabric
         const { gateway, network } = await getFabricConnection(org);
         const contract = network.getContract(contractName);
 
