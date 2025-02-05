@@ -1,0 +1,37 @@
+const { Wallets } = require('fabric-network');
+const path = require('path');
+const fs = require('fs');
+
+async function enrollUserInsurance() {
+    try {
+        // Define Org3 wallet path
+        const walletPath = path.join(__dirname, '../wallets/org3-wallet');
+        const wallet = await Wallets.newFileSystemWallet(walletPath);
+        console.log(`Wallet path: ${walletPath}`);
+
+        // Check if the user already exists in the wallet
+        const userExists = await wallet.get('user3');
+        if (userExists) {
+            console.log('User "insurance-user" already exists in the wallet');
+            return;
+        }
+
+        // Create user identity for insurance user
+        const userIdentity = {
+            credentials: {
+                certificate: fs.readFileSync(path.join(walletPath, 'msp/signcerts/insurance-user-cert.pem'), 'utf8'),
+                privateKey: fs.readFileSync(path.join(walletPath, 'msp/keystore/insurance-user-key.pem'), 'utf8')
+            },
+            mspId: 'Org3MSP',
+            type: 'X.509'
+        };
+
+        // Add insurance user identity to the wallet
+        await wallet.put('user3', userIdentity);
+        console.log('Successfully enrolled user "insurance-user" for Org3 and imported it into the wallet');
+    } catch (error) {
+        console.error(`Failed to enroll user "insurance-user" for Org3: ${error}`);
+    }
+}
+
+enrollUserInsurance();

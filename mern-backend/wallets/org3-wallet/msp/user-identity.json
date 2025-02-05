@@ -1,0 +1,8 @@
+{
+    "type": "X.509",
+    "credentials": {
+        "certificate": "signcerts/user-cert.pem",
+        "privateKey": "keystore/user-key.pem"
+    },
+    "mspId": "Org3MSP"
+}

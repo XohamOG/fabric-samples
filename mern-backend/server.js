@@ -13,7 +13,7 @@ app.use(cors());
 app.use(express.json());
 
 // Utility function to get Fabric connection
-async function getFabricConnection(org) {
+async function getFabricConnection(org, channel) {
     try {
         const walletPath = path.resolve(__dirname, 'wallets', `${org}-wallet`);
         const wallet = await Wallets.newFileSystemWallet(walletPath);
@@ -28,7 +28,7 @@ async function getFabricConnection(org) {
             discovery: { enabled: true, asLocalhost: true },
         });
 
-        return { gateway, network: await gateway.getNetwork('hospitalpatient') };
+        return { gateway, network: await gateway.getNetwork(channel) };
     } catch (error) {
         throw new Error(`Failed to connect to Fabric network: ${error.message}`);
     }
@@ -37,15 +37,15 @@ async function getFabricConnection(org) {
 // Route for invoking transactions (creating/updating records)
 app.post('/api/fabric/invoke', async (req, res) => {
     try {
-        const { org, contractName, fcn, args } = req.body;
+        const { org, channel, contractName, fcn, args } = req.body;
 
-        if (!org || !contractName || !fcn || !Array.isArray(args)) {
+        if (!org || !channel || !contractName || !fcn || !Array.isArray(args)) {
             return res.status(400).json({ success: false, error: 'Missing or invalid required fields' });
         }
 
         console.log(`Invoking transaction: ${fcn} on contract ${contractName} with args:`, args);
 
-        const { gateway, network } = await getFabricConnection(org);
+        const { gateway, network } = await getFabricConnection(org, channel);
         const contract = network.getContract(contractName);
 
         // Invoke the transaction on the Fabric network
@@ -64,32 +64,68 @@ app.post('/api/fabric/invoke', async (req, res) => {
 app.get('/api/fabric/query/:role/:patientId', async (req, res) => {
     try {
         const { role, patientId } = req.params;
-        const org = 'org1'; // Assume org1 for now, modify as needed
-        const contractName = 'basic'; // Modify to use the actual contract name if needed
 
-        if (!patientId) {
-            return res.status(400).json({ success: false, error: 'Patient ID is required' });
+        let org, hospitalChannel, insuranceChannel, contractName, hospitalQueryFcn, insuranceQueryFcn;
+        let hospitalRecord, insuranceRecord;
+
+        // Logic to handle 'patient' role
+        if (role === 'patient') {
+            org = 'org2';  // Assuming 'org2' is the patient's org
+            hospitalChannel = 'hospitalpatient';  // Hospital channel for hospital records
+            insuranceChannel = 'insurancepatient';  // Insurance channel for insurance records
+            contractName = 'basic';  // Assuming contract name is the same for both
+            hospitalQueryFcn = 'ReadHospitalRecord';  // Function to query hospital records
+            insuranceQueryFcn = 'ReadInsuranceRecord';  // Function to query insurance records
+        } else {
+            return res.status(400).json({ success: false, error: 'Invalid role for this endpoint' });
         }
 
         console.log(`Querying record for role: ${role}, Patient ID: ${patientId}`);
 
-        const { gateway, network } = await getFabricConnection(org);
-        const contract = network.getContract(contractName);
+        // Get connection to the hospital network
+        const { gateway: hospitalGateway, network: hospitalNetwork } = await getFabricConnection(org, hospitalChannel);
+        const hospitalContract = hospitalNetwork.getContract(contractName);
 
-        let result;
-        if (role === 'insurance') {
-            // Assuming 'ReadInsuranceRecord' is the function for insurance-related data
-            result = await contract.evaluateTransaction('ReadInsuranceRecord', patientId);
-        } else if (role === 'patient') {
-            // Assuming 'ReadHospitalRecord' is the function for hospital-related data
-            result = await contract.evaluateTransaction('ReadHospitalRecord', patientId);
-        } else {
-            return res.status(400).json({ success: false, error: 'Invalid role' });
+        // Query the hospital patient record
+        try {
+            hospitalRecord = await hospitalContract.evaluateTransaction(hospitalQueryFcn, patientId);
+        } catch (err) {
+            hospitalRecord = null;  // If no record found, set to null
         }
 
-        await gateway.disconnect();
+        // Get connection to the insurance network
+        const { gateway: insuranceGateway, network: insuranceNetwork } = await getFabricConnection(org, insuranceChannel);
+        const insuranceContract = insuranceNetwork.getContract(contractName);
 
-        res.status(200).json({ success: true, result: JSON.parse(result.toString()) });
+        // Query the insurance patient record
+        try {
+            insuranceRecord = await insuranceContract.evaluateTransaction(insuranceQueryFcn, patientId);
+        } catch (err) {
+            insuranceRecord = null;  // If no record found, set to null
+        }
+
+        // Disconnect from the networks
+        await hospitalGateway.disconnect();
+        await insuranceGateway.disconnect();
+
+        // Combine records and return as response
+        const response = {};
+
+        if (hospitalRecord) {
+            response.hospitalRecord = JSON.parse(hospitalRecord.toString());
+        }
+
+        if (insuranceRecord) {
+            response.insuranceRecord = JSON.parse(insuranceRecord.toString());
+        }
+
+        // If both records are not found, return an error
+        if (!hospitalRecord && !insuranceRecord) {
+            return res.status(404).json({ success: false, error: 'Patient record not found in hospital and insurance channels' });
+        }
+
+        res.status(200).json({ success: true, result: response });
+
     } catch (error) {
         console.error('Error querying record:', error);
         res.status(500).json({ success: false, error: error.message });

@@ -1,45 +1,31 @@
-const FabricCAServices = require('fabric-ca-client');
 const { Wallets } = require('fabric-network');
-const path = require('path');
 const fs = require('fs');
+const path = require('path');
 
 async function enrollAdminOrg3() {
     try {
-        // Define Org3 connection profile and wallet path
+        // Define Org3 wallet path
         const walletPath = path.join(__dirname, '../wallets/org3-wallet');
-        const ccpPath = path.resolve(__dirname, '../connection-profiles/connection-profile-org3.json');
-
-        // Create a wallet for managing identities
         const wallet = await Wallets.newFileSystemWallet(walletPath);
-        console.log(`Wallet path: ${walletPath}`);
 
-        // Check if the admin identity already exists in the wallet
+        // Check if admin identity already exists in the wallet
         const adminExists = await wallet.get('admin');
         if (adminExists) {
             console.log('Admin identity already exists in the wallet');
             return;
         }
 
-        // Load Org3 connection profile
-        const ccp = JSON.parse(fs.readFileSync(ccpPath, 'utf8'));
+        // Load the manually generated certificate and private key for Org3
+        const certPath = path.join(__dirname, './wallets/org3-wallet/msp/signcerts/admin-cert.pem');
+        const keyPath = path.join(__dirname, './wallets/org3-wallet/msp/keystore/admin-key.pem');
+        const certificate = fs.readFileSync(certPath, 'utf8');
+        const privateKey = fs.readFileSync(keyPath, 'utf8');
 
-        // Get CA client for Org3
-        const caInfo = ccp.certificateAuthorities['ca.org3.example.com'];
-        const caTLSCACertsPath = path.resolve(__dirname, '../../test-network/organizations/peerOrganizations/org3.example.com/tlsca/tlsca.org3.example.com-cert.pem');
-        const caTLSCACerts = fs.readFileSync(caTLSCACertsPath, 'utf8');
-        const ca = new FabricCAServices(caInfo.url, { trustedRoots: caTLSCACerts, verify: false }, caInfo.caName);
-
-        // Enroll the admin user
-        const enrollment = await ca.enroll({
-            enrollmentID: 'admin',
-            enrollmentSecret: 'adminpw',
-        });
-
-        // Create the admin identity
+        // Create the admin identity for Org3
         const x509Identity = {
             credentials: {
-                certificate: enrollment.certificate,
-                privateKey: enrollment.key.toBytes(),
+                certificate: certificate,
+                privateKey: privateKey,
             },
             mspId: 'Org3MSP',
             type: 'X.509',

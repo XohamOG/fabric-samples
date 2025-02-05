@@ -1,172 +1,135 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import Spline from '@splinetool/react-spline';
+import { motion } from 'framer-motion';
+import './InsurancePage.css';
+import QRCodeScanner from './QRCodeScanner'; // Import QRCodeScanner component
 
 const InsurancePage = () => {
-    const [patientId, setPatientId] = useState('');
-    const [billingData, setBillingData] = useState({
-        patientId: '', billingAmount: '', status: '',
-        insuranceCompany: '', policyNumber: '', coverage: ''
+    const [insuranceData, setInsuranceData] = useState({
+        id: '', name: '', policyNumber: '', coverage: '', validTill: ''
     });
     const [responseMessage, setResponseMessage] = useState('');
-    const [records, setRecords] = useState([]);
+    const [step, setStep] = useState(1);
+    const [action, setAction] = useState(null);
+    const [scanning, setScanning] = useState(false);
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
-        setBillingData({ ...billingData, [name]: value });
+        setInsuranceData({ ...insuranceData, [name]: value });
     };
 
-    const fetchBilling = async () => {
-        if (!patientId) {
-            setResponseMessage('Please enter a valid patient ID');
-            return;
-        }
-
-        try {
-            const response = await axios.get(`http://localhost:5000/api/fabric/query/insurance/${patientId}`);
-            if (response.data && Array.isArray(response.data)) {
-                setRecords(response.data); // Assuming response is an array of records
-            } else if (response.data) {
-                setRecords([response.data]); // If single record returned, wrap it in an array
-            } else {
-                setResponseMessage('No records found');
-            }
-        } catch (error) {
-            console.error('Error fetching records:', error);
-            setResponseMessage('Error fetching records');
+    const handleScan = (data) => {
+        if (data) {
+            setInsuranceData({ ...insuranceData, id: data });
+            setScanning(false);
+            setStep(2);
         }
     };
 
-    const updateBilling = async () => {
-        if (!billingData.patientId || !billingData.billingAmount || !billingData.status) {
-            setResponseMessage('Please provide valid Patient ID and Billing Details');
-            return;
-        }
-
+    const CreateInsuranceRecord = async () => {
         try {
-            const response = await axios.put(`http://localhost:5000/api/fabric/update/insurance/${billingData.patientId}`, billingData);
-            setResponseMessage('Billing details updated successfully');
+            const { id, name, policyNumber, coverage, validTill } = insuranceData;
+            const args = [id, name, policyNumber, coverage, validTill];
+
+            const data = {
+                org: 'org3',
+                channel: 'insurancechannel',
+                contractName: 'basic',
+                fcn: 'CreateInsuranceRecord',
+                args,
+            };
+
+            await axios.post('http://localhost:5000/api/fabric/invoke', data);
+            setResponseMessage('Record created successfully');
         } catch (error) {
-            console.error('Error updating billing details:', error);
-            setResponseMessage('Error updating billing details');
+            console.error('Error creating record:', error);
+            setResponseMessage('Error creating record');
+        }
+    };
+
+    const updateInsuranceRecord = async () => {
+        try {
+            await axios.put(`http://localhost:5000/api/fabric/update/insurance/${insuranceData.id}`, insuranceData);
+            setResponseMessage('Record updated successfully');
+        } catch (error) {
+            console.error('Error updating record:', error);
+            setResponseMessage('Error updating record');
         }
     };
 
     return (
-        <div className="flex flex-col items-center p-6 min-h-screen justify-center bg-gray-50">
-            <h1 className="text-4xl font-bold mb-6">Insurance Panel</h1>
+        <div className="insurance-container">
+            {/* Spline Background */}
+            <Spline
+                scene="https://prod.spline.design/V09Kku2ZzMKZml2Q/scene.splinecode"
+                className="spline-bg"
+            />
 
-            <div className="relative w-full h-80 mb-6">
-                {/* Spline background */}
-                <Spline
-                    scene="https://prod.spline.design/V09Kku2ZzMKZml2Q/scene.splinecode"
-                    style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: '100%',
-                        zIndex: -2,
-                    }}
-                />
-            </div>
+            {/* Overlay Content */}
+            <div className="content-overlay">
+                <h1 className="title">Insurance Panel</h1>
 
-            <div className="bg-white shadow-xl rounded-lg p-8 w-full sm:w-96 space-y-6">
-                <div>
-                    <input
-                        type="text"
-                        value={patientId}
-                        onChange={(e) => setPatientId(e.target.value)}
-                        placeholder="Enter Patient ID"
-                        className="w-full px-6 py-4 border rounded-lg text-lg"
-                    />
-                    <button
-                        className="w-full px-6 py-3 bg-blue-500 text-white rounded-lg text-lg mt-4"
-                        onClick={fetchBilling}
-                    >
-                        Fetch Billing Records
-                    </button>
-                </div>
+                {step === 1 && (
+                    <motion.div className="step-container" initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }}>
+                        <h2>Enter or Scan Insurance ID</h2>
+                        {scanning ? (
+                            <QRCodeScanner onScan={handleScan} /> // Use QRCodeScanner component
+                        ) : (
+                            <>
+                                <motion.button className="btn scan-btn" whileHover={{ scale: 1.05 }} onClick={() => setScanning(true)}>Scan via Webcam</motion.button>
+                                <input type="text" name="id" value={insuranceData.id} onChange={handleInputChange} placeholder="Enter Insurance ID" className="input-field" />
+                                <motion.button className="btn next-btn" whileHover={{ scale: 1.05 }} onClick={() => setStep(2)}>
+                                    Next
+                                </motion.button>
+                            </>
+                        )}
+                    </motion.div>
+                )}
 
-                <div className="space-y-6">
-                    <input
-                        type="text"
-                        name="patientId"
-                        value={billingData.patientId}
-                        onChange={handleInputChange}
-                        placeholder="Enter Patient ID"
-                        className="w-full px-6 py-4 border rounded-lg text-lg"
-                    />
-                    <input
-                        type="text"
-                        name="billingAmount"
-                        value={billingData.billingAmount}
-                        onChange={handleInputChange}
-                        placeholder="Enter Billing Amount"
-                        className="w-full px-6 py-4 border rounded-lg text-lg"
-                    />
-                    <input
-                        type="text"
-                        name="status"
-                        value={billingData.status}
-                        onChange={handleInputChange}
-                        placeholder="Enter Billing Status"
-                        className="w-full px-6 py-4 border rounded-lg text-lg"
-                    />
-                    <input
-                        type="text"
-                        name="insuranceCompany"
-                        value={billingData.insuranceCompany}
-                        onChange={handleInputChange}
-                        placeholder="Enter Insurance Company"
-                        className="w-full px-6 py-4 border rounded-lg text-lg"
-                    />
-                    <input
-                        type="text"
-                        name="policyNumber"
-                        value={billingData.policyNumber}
-                        onChange={handleInputChange}
-                        placeholder="Enter Policy Number"
-                        className="w-full px-6 py-4 border rounded-lg text-lg"
-                    />
-                    <input
-                        type="text"
-                        name="coverage"
-                        value={billingData.coverage}
-                        onChange={handleInputChange}
-                        placeholder="Enter Coverage Details"
-                        className="w-full px-6 py-4 border rounded-lg text-lg"
-                    />
-                    <div className="space-y-4">
-                        <button
-                            className="w-full px-6 py-3 bg-green-500 text-white rounded-lg text-lg"
-                            onClick={updateBilling}
-                        >
-                            Update Billing
-                        </button>
-                    </div>
-                </div>
-            </div>
+                {step === 2 && (
+                    <motion.div className="step-container" initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }}>
+                        <h2>Select Action</h2>
+                        <motion.button className="btn create-btn" whileHover={{ scale: 1.05 }} onClick={() => setAction('create')}>
+                            Create Record
+                        </motion.button>
+                        <motion.button className="btn update-btn" whileHover={{ scale: 1.05 }} onClick={() => setAction('update')}>
+                            Update Record
+                        </motion.button>
+                    </motion.div>
+                )}
 
-            {responseMessage && (
-                <div className="mt-6 p-4 bg-gray-100 rounded-lg w-full sm:w-96">
-                    <h3 className="font-bold">Response Message</h3>
-                    <p>{responseMessage}</p>
-                </div>
-            )}
-
-            {records.length > 0 && (
-                <div className="mt-6 p-4 bg-gray-100 rounded-lg w-full sm:w-96">
-                    <h3 className="font-bold">Billing Records</h3>
-                    <ul>
-                        {records.map((record, index) => (
-                            <li key={index} className="mb-2">
-                                <pre>{JSON.stringify(record, null, 2)}</pre>
-                            </li>
+                {action && (
+                    <motion.div className="form-container" initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }}>
+                        <h2>{action === 'create' ? 'Create New Insurance Record' : 'Update Insurance Record'}</h2>
+                        {['name', 'policyNumber', 'coverage', 'validTill'].map((field) => (
+                            <input
+                                key={field}
+                                type="text"
+                                name={field}
+                                value={insuranceData[field]}
+                                onChange={handleInputChange}
+                                placeholder={`Enter ${field}`}
+                                className="input-field"
+                            />
                         ))}
-                    </ul>
-                </div>
-            )}
+                        <motion.button
+                            className="btn submit-btn"
+                            whileHover={{ scale: 1.05 }}
+                            onClick={action === 'create' ? CreateInsuranceRecord : updateInsuranceRecord}
+                        >
+                            {action === 'create' ? 'Create Record' : 'Update Record'}
+                        </motion.button>
+                    </motion.div>
+                )}
+
+                {responseMessage && (
+                    <motion.div className="response-container" initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }}>
+                        <h3>Response Message</h3>
+                        <p>{responseMessage}</p>
+                    </motion.div>
+                )}
+            </div>
         </div>
     );
 };

@@ -1,27 +1,36 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import Spline from '@splinetool/react-spline';
-import QRCodeScanner from 'react-qr-scanner';
+import QRCodeScanner from './QRCodeScanner'; // Import QRCodeScanner
+import { motion } from 'framer-motion';
+import './Hospital.css';
 
 const Hospital = () => {
-    const [role] = useState('hospital'); // Fixed as 'hospital'
     const [patientData, setPatientData] = useState({
         id: '', name: '', gender: '', bloodType: '',
         allergies: '', diagnosis: '', treatment: ''
     });
     const [responseMessage, setResponseMessage] = useState('');
     const [scanning, setScanning] = useState(false);
+    const [step, setStep] = useState(1);
+    const [action, setAction] = useState(null);
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setPatientData({ ...patientData, [name]: value });
     };
 
+    const handleScan = (data) => {
+        if (data) {
+            setPatientData({ ...patientData, id: data });
+            setScanning(false);
+            setStep(2);
+        }
+    };
+
     const CreateRecord = async () => {
         try {
             const { id, name, gender, bloodType, allergies, diagnosis, treatment } = patientData;
-            
-            // Adjusted args for hospital records (insurance details removed)
             const args = [id, name, gender, bloodType, allergies, diagnosis, treatment];
 
             const data = {
@@ -32,12 +41,8 @@ const Hospital = () => {
                 args,
             };
 
-            const response = await axios.post('http://localhost:5000/api/fabric/invoke', data);
+            await axios.post('http://localhost:5000/api/fabric/invoke', data);
             setResponseMessage('Record created successfully');
-            setPatientData({
-                id: '', name: '', gender: '', bloodType: '',
-                allergies: '', diagnosis: '', treatment: ''
-            });
         } catch (error) {
             console.error('Error creating record:', error);
             setResponseMessage('Error creating record');
@@ -45,13 +50,8 @@ const Hospital = () => {
     };
 
     const updateRecord = async () => {
-        if (!patientData.id) {
-            setResponseMessage('Please provide a valid Patient ID to update');
-            return;
-        }
-
         try {
-            const response = await axios.put(`http://localhost:5000/api/fabric/update/patient/${patientData.id}`, patientData);
+            await axios.put(`http://localhost:5000/api/fabric/update/patient/${patientData.id}`, patientData);
             setResponseMessage('Record updated successfully');
         } catch (error) {
             console.error('Error updating record:', error);
@@ -59,134 +59,61 @@ const Hospital = () => {
         }
     };
 
-    const handleScan = (data) => {
-        if (data) {
-            setPatientData({ ...patientData, id: data });
-            setScanning(false);
-        }
-    };
-
-    const handleError = (err) => {
-        console.error(err);
-        setResponseMessage('Error scanning QR code');
-        setScanning(false);
-    };
-
     return (
-        <div className="flex flex-col items-center p-6 min-h-screen justify-center bg-gray-50">
-            <h1 className="text-4xl font-bold mb-6">Hospital Panel</h1>
-            <div className="relative w-full h-80 mb-6">
-                {/* Spline background */}
-                <Spline
-                    scene="https://prod.spline.design/V09Kku2ZzMKZml2Q/scene.splinecode"
-                    style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: '100%',
-                        zIndex: -2,
-                    }}
-                />
-            </div>
-            <div className="bg-white shadow-xl rounded-lg p-8 w-full sm:w-96 space-y-6">
-                {scanning ? (
-                    <QRCodeScanner
-                        delay={300}
-                        style={{ width: '100%' }}
-                        onScan={handleScan}
-                        onError={handleError}
-                    />
-                ) : (
-                    <div>
-                        <button
-                            className="px-6 py-3 bg-blue-500 text-white rounded-lg mb-6 w-full"
-                            onClick={() => setScanning(true)}
-                        >
-                            Scan QR Code
-                        </button>
-                        <div className="space-y-6">
-                            <input
-                                type="text"
-                                name="id"
-                                value={patientData.id}
-                                onChange={handleInputChange}
-                                placeholder="Enter Patient ID"
-                                className="w-full px-6 py-4 border rounded-lg text-lg"
-                            />
-                            <input
-                                type="text"
-                                name="name"
-                                value={patientData.name}
-                                onChange={handleInputChange}
-                                placeholder="Enter Patient Name"
-                                className="w-full px-6 py-4 border rounded-lg text-lg"
-                            />
-                            <input
-                                type="text"
-                                name="gender"
-                                value={patientData.gender}
-                                onChange={handleInputChange}
-                                placeholder="Enter Gender"
-                                className="w-full px-6 py-4 border rounded-lg text-lg"
-                            />
-                            <input
-                                type="text"
-                                name="bloodType"
-                                value={patientData.bloodType}
-                                onChange={handleInputChange}
-                                placeholder="Enter Blood Type"
-                                className="w-full px-6 py-4 border rounded-lg text-lg"
-                            />
-                            <input
-                                type="text"
-                                name="allergies"
-                                value={patientData.allergies}
-                                onChange={handleInputChange}
-                                placeholder="Enter Allergies"
-                                className="w-full px-6 py-4 border rounded-lg text-lg"
-                            />
-                            <input
-                                type="text"
-                                name="diagnosis"
-                                value={patientData.diagnosis}
-                                onChange={handleInputChange}
-                                placeholder="Enter Diagnosis"
-                                className="w-full px-6 py-4 border rounded-lg text-lg"
-                            />
-                            <input
-                                type="text"
-                                name="treatment"
-                                value={patientData.treatment}
-                                onChange={handleInputChange}
-                                placeholder="Enter Treatment"
-                                className="w-full px-6 py-4 border rounded-lg text-lg"
-                            />
-                            <div className="space-y-4">
-                                <button
-                                    className="w-full px-6 py-3 bg-green-500 text-white rounded-lg text-lg"
-                                    onClick={CreateRecord}
-                                >
-                                    Create Record
-                                </button>
-                                <button
-                                    className="w-full px-6 py-3 bg-yellow-500 text-white rounded-lg text-lg"
-                                    onClick={updateRecord}
-                                >
-                                    Update Record
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+        <div className="hospital-container">
+            {/* Spline Background */}
+            <Spline
+                scene="https://prod.spline.design/V09Kku2ZzMKZml2Q/scene.splinecode"
+                className="spline-bg"
+            />
+            
+
+            {/* Overlay Content */}
+            <div className="content-overlay">
+                <h1 className="title">Hospital Panel</h1>
+
+                {step === 1 && (
+                    <motion.div className="step-container" initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }}>
+                        <h2>Scan QR Code or Enter ID</h2>
+                        {scanning ? (
+                            <QRCodeScanner onScan={handleScan} /> // Use QRCodeScanner component
+                        ) : (
+                            <>
+                                <motion.button className="btn scan-btn" whileHover={{ scale: 1.05 }} onClick={() => setScanning(true)}>Scan via Webcam</motion.button>
+                                <input type="text" name="id" value={patientData.id} onChange={handleInputChange} placeholder="Enter Patient ID" className="input-field" />
+                                <motion.button className="btn next-btn" whileHover={{ scale: 1.05 }} onClick={() => setStep(2)}>Next</motion.button>
+                            </>
+                        )}
+                    </motion.div>
+                )}
+
+                {step === 2 && (
+                    <motion.div className="step-container" initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }}>
+                        <h2>Select Action</h2>
+                        <motion.button className="btn create-btn" whileHover={{ scale: 1.05 }} onClick={() => setAction('create')}>Create Record</motion.button>
+                        <motion.button className="btn update-btn" whileHover={{ scale: 1.05 }} onClick={() => setAction('update')}>Update Record</motion.button>
+                    </motion.div>
+                )}
+
+                {action && (
+                    <motion.div className="form-container" initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }}>
+                        <h2>{action === 'create' ? 'Create New Record' : 'Update Record'}</h2>
+                        {['name', 'gender', 'bloodType', 'allergies', 'diagnosis', 'treatment'].map((field) => (
+                            <input key={field} type="text" name={field} value={patientData[field]} onChange={handleInputChange} placeholder={`Enter ${field}`} className="input-field" />
+                        ))}
+                        <motion.button className="btn submit-btn" whileHover={{ scale: 1.05 }} onClick={action === 'create' ? CreateRecord : updateRecord}>
+                            {action === 'create' ? 'Create Record' : 'Update Record'}
+                        </motion.button>
+                    </motion.div>
+                )}
+
+                {responseMessage && (
+                    <motion.div className="response-container" initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }}>
+                        <h3>Response Message</h3>
+                        <p>{responseMessage}</p>
+                    </motion.div>
                 )}
             </div>
-
-            {responseMessage && (
-                <div className="mt-6 p-4 bg-gray-100 rounded-lg w-full sm:w-96">
-                    <h3 className="font-bold">Response Message</h3>
-                    <p>{responseMessage}</p>
-                </div>
-            )}
         </div>
     );
 };

@@ -6,6 +6,8 @@
     "@splinetool/react-spline": "^4.0.0",
     "axios": "^1.7.9",
     "cra-template": "1.2.0",
+    "framer-motion": "^12.2.0",
+    "jsqr": "^1.4.0",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
     "react-qr-scanner": "^1.0.0-alpha.11",

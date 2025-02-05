@@ -44,11 +44,24 @@ exports.invokeTransaction = async (req, res) => {
 
         const { gateway, contract } = await getContract(org, channel, contractName, identity);
 
-        // Check if record exists before creating it
-        if (fcn === 'CreateRecord') {
+        // Check if record exists before creating a hospital record
+        if (fcn === 'CreateHospitalRecord') {
             const recordId = args[0];
             try {
-                const existingRecord = await contract.evaluateTransaction('QueryRecord', recordId);
+                const existingRecord = await contract.evaluateTransaction('ReadHospitalRecord', recordId);
+                if (existingRecord.length > 0) {
+                    return res.status(400).json({ success: false, error: `Record ${recordId} already exists` });
+                }
+            } catch (err) {
+                console.log('Record does not exist, proceeding to create it.');
+            }
+        }
+
+        // Check if record exists before creating an insurance record
+        if (fcn === 'CreateInsuranceRecord') {
+            const recordId = args[0];
+            try {
+                const existingRecord = await contract.evaluateTransaction('ReadInsuranceRecord', recordId);
                 if (existingRecord.length > 0) {
                     return res.status(400).json({ success: false, error: `Record ${recordId} already exists` });
                 }
@@ -75,7 +88,7 @@ exports.queryTransaction = async (req, res) => {
         const { gateway, contract } = await getContract(org, channel, contractName, identity);
 
         // Query the chaincode with patient ID
-        const result = await contract.evaluateTransaction(fcn, ...args); // args should contain the correct parameters (e.g., patientId)
+        const result = await contract.evaluateTransaction(fcn, ...args);
 
         await gateway.disconnect();
 

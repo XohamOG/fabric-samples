@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import Spline from '@splinetool/react-spline';
+import { motion } from 'framer-motion';
+import QRCodeScanner from './QRCodeScanner'; // Import QRCodeScanner
+import './PatientPage.css';  // Import the CSS file
 
 const PatientPage = () => {
     const [patientId, setPatientId] = useState('');
@@ -9,6 +12,7 @@ const PatientPage = () => {
         address: '', contact: '', medicalHistory: ''
     });
     const [responseMessage, setResponseMessage] = useState('');
+    const [scanning, setScanning] = useState(false);  // To toggle QR code scanner
 
     const fetchPatientData = async () => {
         if (!patientId) {
@@ -29,11 +33,19 @@ const PatientPage = () => {
         }
     };
 
-    return (
-        <div className="flex flex-col items-center p-6 min-h-screen justify-center bg-gray-50">
-            <h1 className="text-4xl font-bold mb-6">Patient Panel</h1>
+    const handleScan = (data) => {
+        if (data) {
+            setPatientId(data);  // Set the scanned ID
+            setScanning(false);   // Close the QR code scanner
+            fetchPatientData();  // Fetch patient data based on the scanned ID
+        }
+    };
 
-            <div className="relative w-full h-80 mb-6">
+    return (
+        <div className="patient-page-container">
+            <h1 className="patient-page-title">Patient Panel</h1>
+
+            <div className="spline-container">
                 {/* Spline background */}
                 <Spline
                     scene="https://prod.spline.design/V09Kku2ZzMKZml2Q/scene.splinecode"
@@ -48,33 +60,56 @@ const PatientPage = () => {
                 />
             </div>
 
-            <div className="bg-white shadow-xl rounded-lg p-8 w-full sm:w-96 space-y-6">
-                <div>
-                    <input
-                        type="text"
-                        value={patientId}
-                        onChange={(e) => setPatientId(e.target.value)}
-                        placeholder="Enter Patient ID"
-                        className="w-full px-6 py-4 border rounded-lg text-lg"
-                    />
-                    <button
-                        className="w-full px-6 py-3 bg-blue-500 text-white rounded-lg text-lg mt-4"
-                        onClick={fetchPatientData}
-                    >
-                        Fetch Patient Data
-                    </button>
-                </div>
+            <div className="bg-white shadow-2xl rounded-lg p-8 w-full sm:w-96 space-y-6">
+                {/* Display QR code scanner or input field */}
+                {scanning ? (
+                    <QRCodeScanner onScan={handleScan} /> // QR Code Scanner
+                ) : (
+                    <div>
+                        <input
+                            type="text"
+                            value={patientId}
+                            onChange={(e) => setPatientId(e.target.value)}
+                            placeholder="Enter Patient ID"
+                            className="input-field"
+                        />
+                        <motion.button
+                            className="fetch-btn"
+                            onClick={fetchPatientData}
+                            whileHover={{ scale: 1.05 }}
+                        >
+                            Fetch Patient Data
+                        </motion.button>
+                        <motion.button
+                            className="scan-btn"
+                            onClick={() => setScanning(true)}  // Enable QR code scanner
+                            whileHover={{ scale: 1.05 }}
+                        >
+                            Scan Patient ID
+                        </motion.button>
+                    </div>
+                )}
             </div>
 
             {responseMessage && (
-                <div className="mt-6 p-4 bg-gray-100 rounded-lg w-full sm:w-96">
+                <motion.div 
+                    className="response-message"
+                    initial={{ opacity: 0 }} 
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.5 }}
+                >
                     <h3 className="font-bold">Response Message</h3>
                     <p>{responseMessage}</p>
-                </div>
+                </motion.div>
             )}
 
             {patientData.patientId && (
-                <div className="mt-6 p-4 bg-gray-100 rounded-lg w-full sm:w-96">
+                <motion.div
+                    className="patient-data-container"
+                    initial={{ opacity: 0 }} 
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.5 }}
+                >
                     <h3 className="font-bold">Patient Data</h3>
                     <ul className="space-y-2">
                         <li><strong>Patient ID:</strong> {patientData.patientId}</li>
@@ -85,7 +120,7 @@ const PatientPage = () => {
                         <li><strong>Contact:</strong> {patientData.contact}</li>
                         <li><strong>Medical History:</strong> {patientData.medicalHistory}</li>
                     </ul>
-                </div>
+                </motion.div>
             )}
         </div>
     );

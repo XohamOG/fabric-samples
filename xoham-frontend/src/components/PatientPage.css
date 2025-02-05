@@ -1,0 +1,100 @@
+/* PatientPage.css */
+
+/* Gradient Background */
+.patient-page-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 6rem 2rem;
+    min-height: 100vh;
+    justify-content: center;
+    position: relative;
+}
+
+/* Title Styling */
+.patient-page-title {
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin-bottom: 1.5rem;
+    color: rgb(0, 0, 0);
+}
+
+/* Spline background */
+.spline-background {
+    top: 0;
+    left: 100000px;
+    width: 100%;
+    height: 100%;
+    z-index: -1;  /* Set to background layer */
+}
+
+/* Input Field Styling */
+.input-field {
+    width: 100%;
+    padding: 1rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.75rem;
+    font-size: 1.125rem;
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+.input-field:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 5px rgba(59, 130, 246, 0.6);
+}
+
+/* Button Styling */
+.fetch-btn {
+    width: 100%;
+    padding: 0.75rem;
+    background-color: #3b82f6;
+    color: white;
+    border-radius: 0.75rem;
+    font-size: 1.125rem;
+    margin-top: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.fetch-btn:hover {
+    background-color: #2563eb;
+    transform: scale(1.05);
+}
+
+/* Response Message Styling */
+.response-message {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background-color: #f3f4f6;
+    border-radius: 0.75rem;
+    width: 100%;
+    max-width: 24rem;
+}
+
+.response-message h3 {
+    font-weight: bold;
+}
+
+/* Patient Data Styling */
+.patient-data-container {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background-color: #f3f4f6;
+    border-radius: 0.75rem;
+    width: 100%;
+    max-width: 24rem;
+}
+
+.patient-data-container ul {
+    list-style-type: none;
+    padding-left: 0;
+}
+
+.patient-data-container li {
+    margin-bottom: 0.5rem;
+}
+
+.patient-data-container strong {
+    font-weight: bold;
+}

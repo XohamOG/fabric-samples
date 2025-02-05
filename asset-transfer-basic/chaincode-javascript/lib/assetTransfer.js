@@ -186,6 +186,47 @@ class AssetTransfer extends Contract {
         }
         return JSON.stringify(allResults);
     }
+    // Read a full health record for a patient, including hospital and insurance details
+    async ReadPatientRecord(ctx, id) {
+    // Read the hospital patient record
+    const hospitalRecordJSON = await ctx.stub.getState('hospitalPatient_' + id);
+         let hospitalRecord = null;
+            if (hospitalRecordJSON && hospitalRecordJSON.length > 0) {
+        hospitalRecord = JSON.parse(hospitalRecordJSON.toString());
+        // Exclude Billing and Policy from hospital patient records
+        delete hospitalRecord.Billing;
+        delete hospitalRecord.Policy;
+    }
+
+    // Read the insurance patient record
+    const insuranceRecordJSON = await ctx.stub.getState('insurancePatient_' + id);
+    let insuranceRecord = null;
+    if (insuranceRecordJSON && insuranceRecordJSON.length > 0) {
+        insuranceRecord = JSON.parse(insuranceRecordJSON.toString());
+        // Only return Billing and Policy for insurance patient records
+        insuranceRecord = {
+            ID: insuranceRecord.ID,
+            Billing: insuranceRecord.Billing,
+            Policy: insuranceRecord.Policy,
+        };
+    }
+
+    if (!hospitalRecord && !insuranceRecord) {
+        throw new Error(`No records found for patient ID ${id}`);
+    }
+
+    // Combine both records
+    const patientRecord = {
+        hospitalRecord,
+        insuranceRecord
+    };
+
+    return JSON.stringify(patientRecord);
 }
+
+}
+
+
+
 
 module.exports = AssetTransfer;
