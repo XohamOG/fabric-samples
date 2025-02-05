@@ -80,20 +80,88 @@ exports.invokeTransaction = async (req, res) => {
     }
 };
 
-// Function to query transaction
+// Function to query transaction based on role and channels
 exports.queryTransaction = async (req, res) => {
     try {
-        const { org, channel, contractName, fcn, args, identity = 'user1' } = req.query;
+        const { role, patientId } = req.params;
 
-        const { gateway, contract } = await getContract(org, channel, contractName, identity);
+        let org, hospitalChannel, insuranceChannel, contractName, hospitalQueryFcn, insuranceQueryFcn;
+        let hospitalRecord, insuranceRecord;
 
-        // Query the chaincode with patient ID
-        const result = await contract.evaluateTransaction(fcn, ...args);
+        // Determine channels and functions based on the role
+        if (role === 'hospital') {
+            org = 'org1';  // Hospital organization
+            hospitalChannel = 'hospitalpatient';  // Hospital channel for hospital records
+            contractName = 'basic';  // Assuming contract name is the same
+            hospitalQueryFcn = 'ReadHospitalRecord';  // Function to query hospital records
+        } else if (role === 'insurance') {
+            org = 'org2';  // Insurance organization
+            insuranceChannel = 'insurancepatient';  // Insurance channel for insurance records
+            contractName = 'basic';  // Assuming contract name is the same
+            insuranceQueryFcn = 'ReadInsuranceRecord';  // Function to query insurance records
+        } else if (role === 'patient') {
+            org = 'org3';  // Patient organization
+            hospitalChannel = 'hospitalpatient';  // Hospital channel for hospital records
+            insuranceChannel = 'insurancepatient';  // Insurance channel for insurance records
+            contractName = 'basic';  // Assuming contract name is the same
+            hospitalQueryFcn = 'ReadHospitalRecord';  // Function to query hospital records
+            insuranceQueryFcn = 'ReadInsuranceRecord';  // Function to query insurance records
+        } else {
+            return res.status(400).json({ success: false, error: 'Invalid role for this endpoint' });
+        }
 
-        await gateway.disconnect();
+        // Get connection to the hospital network (if applicable)
+        let hospitalGateway, hospitalNetwork;
+        if (hospitalChannel) {
+            ({ gateway: hospitalGateway, network: hospitalNetwork } = await getFabricConnection(org, hospitalChannel));
+            const hospitalContract = hospitalNetwork.getContract(contractName);
 
-        res.status(200).json({ success: true, data: JSON.parse(result.toString()) });
+            // Query the hospital patient record
+            try {
+                hospitalRecord = await hospitalContract.evaluateTransaction(hospitalQueryFcn, patientId);
+            } catch (err) {
+                hospitalRecord = null;  // If no record found, set to null
+            }
+        }
+
+        // Get connection to the insurance network (if applicable)
+        let insuranceGateway, insuranceNetwork;
+        if (insuranceChannel) {
+            ({ gateway: insuranceGateway, network: insuranceNetwork } = await getFabricConnection(org, insuranceChannel));
+            const insuranceContract = insuranceNetwork.getContract(contractName);
+
+            // Query the insurance patient record
+            try {
+                insuranceRecord = await insuranceContract.evaluateTransaction(insuranceQueryFcn, patientId);
+            } catch (err) {
+                insuranceRecord = null;  // If no record found, set to null
+            }
+        }
+
+        // Disconnect from the networks
+        if (hospitalGateway) await hospitalGateway.disconnect();
+        if (insuranceGateway) await insuranceGateway.disconnect();
+
+        // Combine records and return as response
+        const response = {};
+
+        if (hospitalRecord) {
+            response.hospitalRecord = JSON.parse(hospitalRecord.toString());
+        }
+
+        if (insuranceRecord) {
+            response.insuranceRecord = JSON.parse(insuranceRecord.toString());
+        }
+
+        // If no records are found, return an error
+        if (!hospitalRecord && !insuranceRecord) {
+            return res.status(404).json({ success: false, error: 'Patient record not found in hospital and insurance channels' });
+        }
+
+        res.status(200).json({ success: true, result: response });
+
     } catch (error) {
+        console.error('Error querying record:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 };

@@ -19,12 +19,16 @@ const PatientPage = () => {
             setResponseMessage('Please enter a valid patient ID');
             return;
         }
-
+    
         try {
             const response = await axios.get(`http://localhost:5000/api/fabric/query/patient/${patientId}`);
-            if (response.data) {
+            console.log('API Response:', response.data);  // Debugging log
+    
+            if (response.data && Object.keys(response.data).length > 0) {
                 setPatientData(response.data); // Set the patient data
+                setResponseMessage('Patient data fetched successfully');
             } else {
+                setPatientData({});  // Reset if no data
                 setResponseMessage('No records found');
             }
         } catch (error) {

@@ -15,17 +15,41 @@ const Hospital = () => {
     const [step, setStep] = useState(1);
     const [action, setAction] = useState(null);
 
-    const handleInputChange = (e) => {
-        const { name, value } = e.target;
-        setPatientData({ ...patientData, [name]: value });
-    };
-
+    // Function to handle QR code scan
     const handleScan = (data) => {
         if (data) {
             setPatientData({ ...patientData, id: data });
             setScanning(false);
             setStep(2);
+            fetchPatientDetails(data);  // Fetch patient details after scan
         }
+    };
+
+    // Function to fetch patient details from the blockchain
+    const fetchPatientDetails = async (patientId) => {
+        try {
+            const response = await axios.get(`http://localhost:5000/api/fabric/query/hospital/${patientId}`);
+            if (response.data) {
+                setPatientData({
+                    ...patientData,
+                    name: response.data.name,
+                    gender: response.data.gender,
+                    bloodType: response.data.bloodType,
+                    allergies: response.data.allergies,
+                    diagnosis: response.data.diagnosis,
+                    treatment: response.data.treatment,
+                });
+                setResponseMessage('Patient details fetched successfully');
+            }
+        } catch (error) {
+            console.error('Error fetching patient details:', error);
+            setResponseMessage('Error fetching patient details');
+        }
+    };
+
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setPatientData({ ...patientData, [name]: value });
     };
 
     const CreateRecord = async () => {
@@ -51,7 +75,26 @@ const Hospital = () => {
 
     const updateRecord = async () => {
         try {
-            await axios.put(`http://localhost:5000/api/fabric/update/patient/${patientData.id}`, patientData);
+            const { id, name, gender, bloodType, allergies, diagnosis, treatment } = patientData;
+    
+            // Ensure that patient ID is provided
+            if (!id) {
+                setResponseMessage('Patient ID is required');
+                return;
+            }
+    
+            const args = [id, name, gender, bloodType, allergies, diagnosis, treatment];
+    
+            const data = {
+                org: 'org1',
+                channel: 'hospitalpatient',
+                contractName: 'basic',
+                fcn: 'UpdateHospitalRecord', // Call the chaincode function for updating
+                args, // Pass arguments as an array
+            };
+    
+            // Send the request to the backend API for the update
+            await axios.put(`http://localhost:5000/api/fabric/update/patient/${id}`, data);
             setResponseMessage('Record updated successfully');
         } catch (error) {
             console.error('Error updating record:', error);
@@ -67,7 +110,6 @@ const Hospital = () => {
                 className="spline-bg"
             />
             
-
             {/* Overlay Content */}
             <div className="content-overlay">
                 <h1 className="title">Hospital Panel</h1>

@@ -83,17 +83,21 @@ class AssetTransfer extends Contract {
     }
 
     // Read full health record for hospital patients (without billing)
-    async ReadHospitalRecord(ctx, id) {
-        const recordJSON = await ctx.stub.getState(id);
-        if (!recordJSON || recordJSON.length === 0) {
-            throw new Error(`The record ${id} does not exist`);
-        }
-        const record = JSON.parse(recordJSON.toString());
-        // Exclude billing info from hospital patient records
-        delete record.Billing;
-        delete record.Policy;
-        return JSON.stringify(record);
+// Read full health record for hospital patients from the hospitalpatient channel
+async ReadHospitalRecord(ctx, id) {
+    // Fetch data from the 'hospitalpatient' channel for the given ID
+    const recordJSON = await ctx.stub.getState('hospitalpatient_' + id); // Change key format as needed based on your setup
+
+    if (!recordJSON || recordJSON.length === 0) {
+        throw new Error(`The record ${id} does not exist`);
     }
+
+    const record = JSON.parse(recordJSON.toString());
+
+    // Return the full hospital patient record
+    return JSON.stringify(record);
+}
+
 
     // Read full health record for insurance patients (only billing and policy info)
     async ReadInsuranceRecord(ctx, id) {

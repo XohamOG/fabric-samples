@@ -17,8 +17,14 @@ async function getFabricConnection(org, channel) {
     try {
         const walletPath = path.resolve(__dirname, 'wallets', `${org}-wallet`);
         const wallet = await Wallets.newFileSystemWallet(walletPath);
-        const gateway = new Gateway();
 
+        // Check if the identity exists in the wallet
+        const identity = await wallet.get('admin');
+        if (!identity) {
+            throw new Error(`Identity 'admin' not found in wallet for ${org}`);
+        }
+
+        const gateway = new Gateway();
         const networkConfigPath = path.resolve(__dirname, 'connection-profile.yaml');
         const networkConfig = yaml.load(fs.readFileSync(networkConfigPath, 'utf8'));
 
@@ -34,6 +40,45 @@ async function getFabricConnection(org, channel) {
     }
 }
 
+// Function to invoke chaincode on the Fabric network
+async function invokeChaincode(org, channel, contractName, fcn, args) {
+    try {
+        const { gateway, network } = await getFabricConnection(org, channel);
+        const contract = network.getContract(contractName);
+
+        // Invoke the transaction on the Fabric network
+        const result = await contract.submitTransaction(fcn, ...args);
+
+        // Disconnect after transaction
+        await gateway.disconnect();
+
+        return result.toString();
+    } catch (error) {
+        throw new Error(`Failed to invoke chaincode: ${error.message}`);
+    }
+}
+
+// Route for updating patient record
+app.put('/api/fabric/update/patient/:id', async (req, res) => {
+    const patientId = req.params.id; // Get patientId from URL
+    const { org, channel, contractName, fcn, args } = req.body;
+
+    try {
+        // Ensure the args are in the correct format
+        if (!args || args.length !== 7) {
+            return res.status(400).json({ success: false, error: 'Missing required arguments for update' });
+        }
+
+        // Call the function to update the hospital record in Hyperledger Fabric
+        const result = await invokeChaincode(org, channel, contractName, fcn, args);
+
+        res.status(200).json({ success: true, message: 'Record updated successfully', result });
+    } catch (error) {
+        console.error('Error updating record:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // Route for invoking transactions (creating/updating records)
 app.post('/api/fabric/invoke', async (req, res) => {
     try {
@@ -45,15 +90,9 @@ app.post('/api/fabric/invoke', async (req, res) => {
 
         console.log(`Invoking transaction: ${fcn} on contract ${contractName} with args:`, args);
 
-        const { gateway, network } = await getFabricConnection(org, channel);
-        const contract = network.getContract(contractName);
+        const result = await invokeChaincode(org, channel, contractName, fcn, args);
 
-        // Invoke the transaction on the Fabric network
-        const result = await contract.submitTransaction(fcn, ...args);
-
-        await gateway.disconnect();
-
-        res.status(200).json({ success: true, result: result.toString() });
+        res.status(200).json({ success: true, result });
     } catch (error) {
         console.error('Error invoking transaction:', error);
         res.status(500).json({ success: false, error: error.message });
@@ -136,3 +175,5 @@ app.get('/api/fabric/query/:role/:patientId', async (req, res) => {
 app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
 });
+
+
