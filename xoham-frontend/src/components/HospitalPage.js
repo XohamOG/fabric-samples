@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import Spline from '@splinetool/react-spline';
-import QRCodeScanner from './QRCodeScanner'; // Import QRCodeScanner
+import QRCodeScanner from './QRCodeScanner';
 import { motion } from 'framer-motion';
 import './Hospital.css';
 
@@ -25,21 +25,17 @@ const Hospital = () => {
         }
     };
 
-    // Function to fetch patient details from the blockchain
+    // Function to fetch patient details
     const fetchPatientDetails = async (patientId) => {
         try {
+            // Use the correct endpoint URL with the role (e.g., 'hospital') and patientId
             const response = await axios.get(`http://localhost:5000/api/fabric/query/hospital/${patientId}`);
-            if (response.data) {
-                setPatientData({
-                    ...patientData,
-                    name: response.data.name,
-                    gender: response.data.gender,
-                    bloodType: response.data.bloodType,
-                    allergies: response.data.allergies,
-                    diagnosis: response.data.diagnosis,
-                    treatment: response.data.treatment,
-                });
+            
+            if (response.data.success) {
+                setPatientData(response.data.result.hospitalRecord);  // Assuming the hospital record is nested under 'result'
                 setResponseMessage('Patient details fetched successfully');
+            } else {
+                setResponseMessage('No record found for the patient');
             }
         } catch (error) {
             console.error('Error fetching patient details:', error);
@@ -47,11 +43,13 @@ const Hospital = () => {
         }
     };
 
+    // Handle input changes
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setPatientData({ ...patientData, [name]: value });
     };
 
+    // Create new hospital record
     const CreateRecord = async () => {
         try {
             const { id, name, gender, bloodType, allergies, diagnosis, treatment } = patientData;
@@ -73,28 +71,27 @@ const Hospital = () => {
         }
     };
 
+    // Update existing hospital record
     const updateRecord = async () => {
         try {
             const { id, name, gender, bloodType, allergies, diagnosis, treatment } = patientData;
     
-            // Ensure that patient ID is provided
             if (!id) {
                 setResponseMessage('Patient ID is required');
                 return;
             }
-    
+
             const args = [id, name, gender, bloodType, allergies, diagnosis, treatment];
-    
+
             const data = {
                 org: 'org1',
                 channel: 'hospitalpatient',
                 contractName: 'basic',
-                fcn: 'UpdateHospitalRecord', // Call the chaincode function for updating
-                args, // Pass arguments as an array
+                fcn: 'UpdateHospitalRecord',
+                args,
             };
-    
-            // Send the request to the backend API for the update
-            await axios.put(`http://localhost:5000/api/fabric/update/patient/${id}`, data);
+
+            await axios.post('http://localhost:5000/api/fabric/invoke', data);
             setResponseMessage('Record updated successfully');
         } catch (error) {
             console.error('Error updating record:', error);
@@ -104,13 +101,8 @@ const Hospital = () => {
 
     return (
         <div className="hospital-container">
-            {/* Spline Background */}
-            <Spline
-                scene="https://prod.spline.design/V09Kku2ZzMKZml2Q/scene.splinecode"
-                className="spline-bg"
-            />
+            <Spline scene="https://prod.spline.design/V09Kku2ZzMKZml2Q/scene.splinecode" className="spline-bg" />
             
-            {/* Overlay Content */}
             <div className="content-overlay">
                 <h1 className="title">Hospital Panel</h1>
 
@@ -118,7 +110,7 @@ const Hospital = () => {
                     <motion.div className="step-container" initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }}>
                         <h2>Scan QR Code or Enter ID</h2>
                         {scanning ? (
-                            <QRCodeScanner onScan={handleScan} /> // Use QRCodeScanner component
+                            <QRCodeScanner onScan={handleScan} />
                         ) : (
                             <>
                                 <motion.button className="btn scan-btn" whileHover={{ scale: 1.05 }} onClick={() => setScanning(true)}>Scan via Webcam</motion.button>
@@ -161,3 +153,4 @@ const Hospital = () => {
 };
 
 export default Hospital;
+

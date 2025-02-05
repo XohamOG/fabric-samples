@@ -1,0 +1,71 @@
+const { Wallets } = require('fabric-network');
+const path = require('path');
+const fs = require('fs');
+const { execSync } = require('child_process');
+
+async function generatePeerIdentityAndAddToWallet() {
+    const walletPath = path.join(__dirname, '../wallets/org3-wallet');
+    const peerIdentityPath = path.join(walletPath, 'msp');
+
+    try {
+        console.log('Generating private key for peer3...');
+        // Generate the private key using OpenSSL
+        execSync('openssl ecparam -name prime256v1 -genkey -noout -out peer3-private-key.pem');
+        console.log('Private key generated: peer3-private-key.pem');
+
+        // Create the keystore directory if it doesn't exist
+        if (!fs.existsSync(path.join(peerIdentityPath, 'keystore'))) {
+            fs.mkdirSync(path.join(peerIdentityPath, 'keystore'), { recursive: true });
+        }
+
+        // Move the generated private key to the keystore folder
+        fs.renameSync('peer3-private-key.pem', path.join(peerIdentityPath, 'keystore/peer3-private-key.pem'));
+        
+        console.log('Private key moved to keystore directory.');
+
+        console.log('Generating certificate for peer3 (self-signed)...');
+        // Generate a self-signed certificate for peer3
+        execSync('openssl req -new -x509 -key peer3-private-key.pem -out peer3-cert.pem -days 365');
+        console.log('Self-signed certificate generated: peer3-cert.pem');
+
+        // Create the signcerts directory if it doesn't exist
+        if (!fs.existsSync(path.join(peerIdentityPath, 'signcerts'))) {
+            fs.mkdirSync(path.join(peerIdentityPath, 'signcerts'), { recursive: true });
+        }
+
+        // Move the generated certificate to the signcerts folder
+        fs.renameSync('peer3-cert.pem', path.join(peerIdentityPath, 'signcerts/peer3-cert.pem'));
+        
+        console.log('Certificate moved to signcerts directory.');
+
+        // Create the wallet if it doesn't exist
+        const wallet = await Wallets.newFileSystemWallet(walletPath);
+        console.log(`Wallet path: ${walletPath}`);
+
+        // Check if the peer already exists in the wallet
+        const peerExists = await wallet.get('peer3');
+        if (peerExists) {
+            console.log('Peer "peer3" already exists in the wallet');
+            return;
+        }
+
+        // Create peer identity for Org3 peer
+        const peerIdentity = {
+            credentials: {
+                certificate: fs.readFileSync(path.join(peerIdentityPath, 'signcerts/peer3-cert.pem'), 'utf8'),
+                privateKey: fs.readFileSync(path.join(peerIdentityPath, 'keystore/peer3-private-key.pem'), 'utf8')
+            },
+            mspId: 'Org3MSP',
+            type: 'X.509'
+        };
+
+        // Add the peer identity to the wallet
+        await wallet.put('peer3', peerIdentity);
+        console.log('Successfully added peer "peer3" to the wallet');
+
+    } catch (error) {
+        console.error(`Failed to generate peer identity and add it to the wallet: ${error}`);
+    }
+}
+
+generatePeerIdentityAndAddToWallet();

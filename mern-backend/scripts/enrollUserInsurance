@@ -1,6 +1,7 @@
 const { Wallets } = require('fabric-network');
 const path = require('path');
 const fs = require('fs');
+const { execSync } = require('child_process');
 
 async function enrollUserInsurance() {
     try {
@@ -10,28 +11,49 @@ async function enrollUserInsurance() {
         console.log(`Wallet path: ${walletPath}`);
 
         // Check if the user already exists in the wallet
-        const userExists = await wallet.get('user3');
+        const userExists = await wallet.get('insurance-user');
         if (userExists) {
             console.log('User "insurance-user" already exists in the wallet');
+            return;
+        }
+
+        // Correctly point to the certificate and key locations
+        const privateKeyPath = path.join(__dirname, '../wallets/org3-wallet/msp/keystore/insurance-user-key.pem');
+        const certPath = path.join(__dirname, '../wallets/org3-wallet/msp/signcerts/insurance-user-cert.pem');
+
+        // Check if both the private key and certificate files exist
+        if (!fs.existsSync(privateKeyPath) || !fs.existsSync(certPath)) {
+            console.log(`Private key or certificate not found. Please ensure the files are in the correct directory.`);
+            return;
+        }
+
+        // Load the private key and certificate
+        const privateKey = fs.readFileSync(privateKeyPath, 'utf8');
+        const certificate = fs.readFileSync(certPath, 'utf8');
+
+        // Check if the private key is in ECDSA format (it should start with "-----BEGIN EC PRIVATE KEY-----")
+        if (!privateKey.includes('-----BEGIN EC PRIVATE KEY-----')) {
+            console.error('The private key is not in ECDSA format. Please ensure the private key is in the correct format.');
             return;
         }
 
         // Create user identity for insurance user
         const userIdentity = {
             credentials: {
-                certificate: fs.readFileSync(path.join(walletPath, 'msp/signcerts/insurance-user-cert.pem'), 'utf8'),
-                privateKey: fs.readFileSync(path.join(walletPath, 'msp/keystore/insurance-user-key.pem'), 'utf8')
+                certificate,
+                privateKey
             },
             mspId: 'Org3MSP',
             type: 'X.509'
         };
 
         // Add insurance user identity to the wallet
-        await wallet.put('user3', userIdentity);
+        await wallet.put('insurance-user', userIdentity);
         console.log('Successfully enrolled user "insurance-user" for Org3 and imported it into the wallet');
     } catch (error) {
         console.error(`Failed to enroll user "insurance-user" for Org3: ${error}`);
     }
 }
 
+// Enroll user for Org3
 enrollUserInsurance();

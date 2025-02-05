@@ -5,22 +5,21 @@ const sortKeysRecursive = require('sort-keys-recursive');
 const { Contract } = require('fabric-contract-api');
 
 class AssetTransfer extends Contract {
-
-    // Initialize ledger with some records
+    
+    // Initialize ledger with sample records
     async InitLedger(ctx) {
         const records = [
             {
-                ID: 'hospitalPatient1',
+                ID: 'hospitalPatient_1',
                 Name: 'John Doe',
                 Gender: 'Male',
                 BloodType: 'O+',
                 Allergies: 'Peanuts',
                 Diagnosis: 'Hypertension',
                 Treatment: 'Medication A',
-                // No Billing for hospital patients
             },
             {
-                ID: 'insurancePatient1',
+                ID: 'insurancePatient_1',
                 Name: 'Jane Smith',
                 Billing: {
                     Total: 1500,
@@ -42,7 +41,7 @@ class AssetTransfer extends Contract {
         }
     }
 
-    // CreateRecord for hospital patients (no billing)
+    // Create hospital patient record (no billing)
     async CreateHospitalRecord(ctx, id, name, gender, bloodType, allergies, diagnosis, treatment) {
         const exists = await this.RecordExists(ctx, id);
         if (exists) {
@@ -50,21 +49,21 @@ class AssetTransfer extends Contract {
         }
 
         const record = {
-            ID: id,
+            ID: `hospitalPatient_${id}`,
             Name: name,
             Gender: gender,
             BloodType: bloodType,
             Allergies: allergies,
             Diagnosis: diagnosis,
             Treatment: treatment,
+            Timestamp: new Date().toISOString(),
         };
 
-        await ctx.stub.putState(id, Buffer.from(stringify(sortKeysRecursive(record))));
-
+        await ctx.stub.putState(record.ID, Buffer.from(stringify(sortKeysRecursive(record))));
         return JSON.stringify(record);
     }
 
-    // CreateRecord for insurance patients (only billing and policy)
+    // Create insurance patient record (billing & policy only)
     async CreateInsuranceRecord(ctx, id, billing, policy) {
         const exists = await this.RecordExists(ctx, id);
         if (exists) {
@@ -72,97 +71,85 @@ class AssetTransfer extends Contract {
         }
 
         const record = {
-            ID: id,
+            ID: `insurancePatient_${id}`,
             Billing: JSON.parse(billing),
             Policy: JSON.parse(policy),
+            Timestamp: new Date().toISOString(),
         };
 
-        await ctx.stub.putState(id, Buffer.from(stringify(sortKeysRecursive(record))));
-
+        await ctx.stub.putState(record.ID, Buffer.from(stringify(sortKeysRecursive(record))));
         return JSON.stringify(record);
     }
 
-    // Read full health record for hospital patients (without billing)
-// Read full health record for hospital patients from the hospitalpatient channel
-async ReadHospitalRecord(ctx, id) {
-    // Fetch data from the 'hospitalpatient' channel for the given ID
-    const recordJSON = await ctx.stub.getState('hospitalpatient_' + id); // Change key format as needed based on your setup
+    // Read hospital patient record
+    async ReadHospitalRecord(ctx, id) {
+        const recordJSON = await ctx.stub.getState(`hospitalPatient_${id}`);
 
-    if (!recordJSON || recordJSON.length === 0) {
-        throw new Error(`The record ${id} does not exist`);
-    }
-
-    const record = JSON.parse(recordJSON.toString());
-
-    // Return the full hospital patient record
-    return JSON.stringify(record);
-}
-
-
-    // Read full health record for insurance patients (only billing and policy info)
-    async ReadInsuranceRecord(ctx, id) {
-        const recordJSON = await ctx.stub.getState(id);
         if (!recordJSON || recordJSON.length === 0) {
-            throw new Error(`The record ${id} does not exist`);
+            throw new Error(`The hospital record for ${id} does not exist`);
         }
-        const record = JSON.parse(recordJSON.toString());
-        // Only return Billing and Policy for insurance patients
-        return JSON.stringify({
-            ID: record.ID,
-            Billing: record.Billing,
-            Policy: record.Policy,
-        });
+
+        return recordJSON.toString();
     }
 
-    // UpdateRecord for hospital patients (no billing update)
+    // Read insurance patient record
+    async ReadInsuranceRecord(ctx, id) {
+        const recordJSON = await ctx.stub.getState(`insurancePatient_${id}`);
+
+        if (!recordJSON || recordJSON.length === 0) {
+            throw new Error(`The insurance record for ${id} does not exist`);
+        }
+
+        return recordJSON.toString();
+    }
+
+    // Update hospital record (no billing updates)
     async UpdateHospitalRecord(ctx, id, name, gender, bloodType, allergies, diagnosis, treatment) {
-        const exists = await this.RecordExists(ctx, id);
+        const exists = await this.RecordExists(ctx, `hospitalPatient_${id}`);
         if (!exists) {
             throw new Error(`The record ${id} does not exist`);
         }
 
-        const recordJSON = await this.ReadHospitalRecord(ctx, id);
-        const record = JSON.parse(recordJSON);
+        const updatedRecord = {
+            ID: `hospitalPatient_${id}`,
+            Name: name,
+            Gender: gender,
+            BloodType: bloodType,
+            Allergies: allergies,
+            Diagnosis: diagnosis,
+            Treatment: treatment,
+            Timestamp: new Date().toISOString(),
+        };
 
-        record.Name = name;
-        record.Gender = gender;
-        record.BloodType = bloodType;
-        record.Allergies = allergies;
-        record.Diagnosis = diagnosis;
-        record.Treatment = treatment;
-        record.Timestamp = new Date().toISOString();
-
-        await ctx.stub.putState(id, Buffer.from(stringify(sortKeysRecursive(record))));
-
-        return JSON.stringify(record);
+        await ctx.stub.putState(updatedRecord.ID, Buffer.from(stringify(sortKeysRecursive(updatedRecord))));
+        return JSON.stringify(updatedRecord);
     }
 
-    // UpdateRecord for insurance patients (only billing and policy info)
+    // Update insurance record (billing & policy only)
     async UpdateInsuranceRecord(ctx, id, billing, policy) {
-        const exists = await this.RecordExists(ctx, id);
+        const exists = await this.RecordExists(ctx, `insurancePatient_${id}`);
         if (!exists) {
             throw new Error(`The record ${id} does not exist`);
         }
 
-        const recordJSON = await this.ReadInsuranceRecord(ctx, id);
-        const record = JSON.parse(recordJSON);
+        const updatedRecord = {
+            ID: `insurancePatient_${id}`,
+            Billing: JSON.parse(billing),
+            Policy: JSON.parse(policy),
+            Timestamp: new Date().toISOString(),
+        };
 
-        record.Billing = JSON.parse(billing);
-        record.Policy = JSON.parse(policy);
-        record.Timestamp = new Date().toISOString();
-
-        await ctx.stub.putState(id, Buffer.from(stringify(sortKeysRecursive(record))));
-
-        return JSON.stringify(record);
+        await ctx.stub.putState(updatedRecord.ID, Buffer.from(stringify(sortKeysRecursive(updatedRecord))));
+        return JSON.stringify(updatedRecord);
     }
 
-    // Delete a health record
+    // Delete a record
     async DeleteRecord(ctx, id) {
         const exists = await this.RecordExists(ctx, id);
         if (!exists) {
             throw new Error(`The record ${id} does not exist`);
         }
-        return ctx.stub.deleteState(id);
+        await ctx.stub.deleteState(id);
     }
 
     // Check if a record exists
@@ -171,11 +158,12 @@ async ReadHospitalRecord(ctx, id) {
         return recordJSON && recordJSON.length > 0;
     }
 
-    // Get all records
+    // Fetch all health records
     async GetAllRecords(ctx) {
         const allResults = [];
         const iterator = await ctx.stub.getStateByRange('', '');
         let result = await iterator.next();
+
         while (!result.done) {
             const strValue = Buffer.from(result.value.value.toString()).toString('utf8');
             let record;
@@ -190,47 +178,31 @@ async ReadHospitalRecord(ctx, id) {
         }
         return JSON.stringify(allResults);
     }
-    // Read a full health record for a patient, including hospital and insurance details
+
+    // Fetch complete patient record (hospital + insurance details)
     async ReadPatientRecord(ctx, id) {
-    // Read the hospital patient record
-    const hospitalRecordJSON = await ctx.stub.getState('hospitalPatient_' + id);
-         let hospitalRecord = null;
-            if (hospitalRecordJSON && hospitalRecordJSON.length > 0) {
-        hospitalRecord = JSON.parse(hospitalRecordJSON.toString());
-        // Exclude Billing and Policy from hospital patient records
-        delete hospitalRecord.Billing;
-        delete hospitalRecord.Policy;
+        let hospitalRecord = null;
+        let insuranceRecord = null;
+
+        // Fetch hospital record
+        const hospitalRecordJSON = await ctx.stub.getState(`hospitalPatient_${id}`);
+        if (hospitalRecordJSON && hospitalRecordJSON.length > 0) {
+            hospitalRecord = JSON.parse(hospitalRecordJSON.toString());
+        }
+
+        // Fetch insurance record
+        const insuranceRecordJSON = await ctx.stub.getState(`insurancePatient_${id}`);
+        if (insuranceRecordJSON && insuranceRecordJSON.length > 0) {
+            insuranceRecord = JSON.parse(insuranceRecordJSON.toString());
+        }
+
+        if (!hospitalRecord && !insuranceRecord) {
+            throw new Error(`No records found for patient ID ${id}`);
+        }
+
+        // Combine both records
+        return JSON.stringify({ hospitalRecord, insuranceRecord });
     }
-
-    // Read the insurance patient record
-    const insuranceRecordJSON = await ctx.stub.getState('insurancePatient_' + id);
-    let insuranceRecord = null;
-    if (insuranceRecordJSON && insuranceRecordJSON.length > 0) {
-        insuranceRecord = JSON.parse(insuranceRecordJSON.toString());
-        // Only return Billing and Policy for insurance patient records
-        insuranceRecord = {
-            ID: insuranceRecord.ID,
-            Billing: insuranceRecord.Billing,
-            Policy: insuranceRecord.Policy,
-        };
-    }
-
-    if (!hospitalRecord && !insuranceRecord) {
-        throw new Error(`No records found for patient ID ${id}`);
-    }
-
-    // Combine both records
-    const patientRecord = {
-        hospitalRecord,
-        insuranceRecord
-    };
-
-    return JSON.stringify(patientRecord);
 }
-
-}
-
-
-
 
 module.exports = AssetTransfer;

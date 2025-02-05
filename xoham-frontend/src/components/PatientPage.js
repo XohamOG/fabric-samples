@@ -24,9 +24,23 @@ const PatientPage = () => {
             const response = await axios.get(`http://localhost:5000/api/fabric/query/patient/${patientId}`);
             console.log('API Response:', response.data);  // Debugging log
     
-            if (response.data && Object.keys(response.data).length > 0) {
-                setPatientData(response.data); // Set the patient data
-                setResponseMessage('Patient data fetched successfully');
+            if (response.data && response.data.result && response.data.result.hospitalRecord) {
+                const { hospitalRecord } = response.data.result;
+                const formattedMessage = `
+                    <div>
+                        <h3>Patient Data</h3>
+                        <p><strong>Name:</strong> ${hospitalRecord.Name}</p>
+                        <p><strong>ID:</strong> ${hospitalRecord.ID}</p>
+                        <p><strong>Gender:</strong> ${hospitalRecord.Gender}</p>
+                        <p><strong>Blood Type:</strong> ${hospitalRecord.BloodType}</p>
+                        <p><strong>Allergies:</strong> ${hospitalRecord.Allergies}</p>
+                        <p><strong>Diagnosis:</strong> ${hospitalRecord.Diagnosis}</p>
+                        <p><strong>Treatment:</strong> ${hospitalRecord.Treatment}</p>
+                        <p><strong>Timestamp:</strong> ${new Date(hospitalRecord.Timestamp).toLocaleString()}</p>
+                    </div>
+                `;
+                setPatientData(response.data);
+                setResponseMessage(formattedMessage);
             } else {
                 setPatientData({});  // Reset if no data
                 setResponseMessage('No records found');
@@ -103,7 +117,7 @@ const PatientPage = () => {
                     transition={{ duration: 0.5 }}
                 >
                     <h3 className="font-bold">Response Message</h3>
-                    <p>{responseMessage}</p>
+                    <div dangerouslySetInnerHTML={{ __html: responseMessage }} />
                 </motion.div>
             )}
 
