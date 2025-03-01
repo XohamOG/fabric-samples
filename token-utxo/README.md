@@ -11,7 +11,7 @@ While a transfer transaction spends UTXOs and creates new UTXOs for the recipien
 In this tutorial, you will mint and transfer tokens as follows:
 
 - A member of Org1 uses the `Mint` function to create a UTXO representing a number of tokens. The `Mint` function reads the certificate information of the client identity that submitted the transaction using the `GetClientIdentity.GetID()` API and assigns the UTXO ownership to the minter client ID.
-- The same minter client will then use the `Transfer` function to transfer the requested number of tokens to a recipient. The minted UTXO key gets passed as input to the `Transfer` function, a UTXO output representing the number of transferred tokens gets created for the recipient, and another UTXO output representing the 'change' gets created for the minter. It is assumed that the recipient has provided their client ID to the transfer caller out of band. The recipient can then transfer tokens to other registered users in the same fashion.
+- The same minter client will then use the `Transfer` function to transfer the requested number of tokens to a recipient. The minted UTXO key gets passed as input to the `Transfer` function, a UTXO output representing the number f transferred tokens gets created for the recipient, and another UTXO output representing the 'change' gets created for the minter. It is assumed that the recipient has provided their client ID to the transfer caller out of band. The recipient can then transfer tokens to other registered users in the same fashion.
 
 ## Bring up the test network
 
