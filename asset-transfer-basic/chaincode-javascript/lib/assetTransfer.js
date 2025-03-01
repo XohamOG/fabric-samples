@@ -139,18 +139,21 @@ class AssetTransfer extends Contract {
     }
 
     async GetAllRecords(ctx) {
-        const allResults = [];
-        const iterator = await ctx.stub.getStateByRange('', '');
-
-        for await (const result of iterator) {
-            try {
-                allResults.push(JSON.parse(result.value.toString('utf8')));
-            } catch (err) {
-                console.log('Error parsing record:', err);
+        const iterator = await ctx.stub.getStateByRange('', '');  // Get all records from the state database
+        const results = [];
+        
+        // Use async iterator properly
+        while (true) {
+            const res = await iterator.next();
+            if (res.done) {
+                break;
             }
+            // Store key and value of each record
+            results.push({ key: res.value.key, value: res.value.value.toString('utf8') });
         }
-
-        return JSON.stringify(allResults);
+        
+        // Return the collected records
+        return JSON.stringify(results);
     }
 
     async ReadPatientRecord(ctx, id) {
